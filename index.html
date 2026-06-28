@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>古洛尼订单录入系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, "Microsoft YaHei", sans-serif;
+        }
+        body {
+            background: #f5f6fa;
+            padding: 16px;
+            padding-bottom: 30px;
+        }
+        .header {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: #fff;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .header h1 {
+            font-size: 20px;
+            font-weight: 500;
+            letter-spacing: 2px;
+        }
+        .header p {
+            font-size: 12px;
+            color: #aaa;
+            margin-top: 4px;
+        }
+        .form-group {
+            background: #fff;
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 4px;
+        }
+        .form-group label .required {
+            color: #e94560;
+        }
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 15px;
+            outline: none;
+            background: #fafafa;
+            transition: border 0.2s;
+            -webkit-appearance: none;
+        }
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            border-color: #e94560;
+            background: #fff;
+        }
+        .form-group textarea {
+            resize: vertical;
+            min-height: 50px;
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .form-row .form-group {
+            padding: 12px;
+        }
+        .btn-submit {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #e94560, #c0392b);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.1s;
+            letter-spacing: 1px;
+        }
+        .btn-submit:active {
+            transform: scale(0.97);
+        }
+        .btn-submit:disabled {
+            opacity: 0.6;
+            transform: none;
+        }
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            display: none;
+            z-index: 999;
+            white-space: nowrap;
+        }
+        .toast.show {
+            display: block;
+            animation: fadeInUp 0.3s ease;
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+        .sub-label {
+            font-size: 12px;
+            color: #999;
+            font-weight: 400;
+        }
+        .inline-tip {
+            font-size: 11px;
+            color: #e94560;
+            margin-top: 2px;
+        }
+        @media (max-width: 480px) {
+            .form-row {
+                grid-template-columns: 1fr;
+                gap: 0;
+            }
+            .form-row .form-group {
+                padding: 12px 0;
+                background: transparent;
+                box-shadow: none;
+                margin-bottom: 0;
+            }
+            .form-row .form-group:first-child {
+                padding-top: 0;
+            }
+            .form-row .form-group:last-child {
+                padding-bottom: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>📋 古洛尼订单录入系统</h1>
+    <p>gorenje · 移动端</p>
+</div>
+
+<form id="orderForm" autocomplete="off">
+    
+    <div class="form-group">
+        <label>📅 订单日期 <span class="required">*</span></label>
+        <input type="date" id="orderDate" required>
+    </div>
+
+    <div class="form-row">
+        <div class="form-group">
+            <label>👤 客户姓名 <span class="required">*</span></label>
+            <input type="text" id="customerName" required>
+        </div>
+        <div class="form-group">
+            <label>📞 联系电话 <span class="required">*</span></label>
+            <input type="tel" id="phone" required>
+        </div>
+    </div>
+
+    <div class="form-row">
+        <div class="form-group">
+            <label>👔 销售人员 <span class="required">*</span></label>
+            <input type="text" id="salesperson" required>
+        </div>
+        <div class="form-group">
+            <label>📢 销售渠道</label>
+            <input type="text" id="salesChannel" list="channelList">
+            <datalist id="channelList">
+                <option value="异业推荐">
+                <option value="楼盘">
+                <option value="商场">
+                <option value="老客户">
+                <option value="线上">
+                <option value="公司">
+            </datalist>
+        </div>
+    </div>
+
+    <div class="form-row">
+        <div class="form-group">
+            <label>🏷️ 商品品牌</label>
+            <input type="text" id="brand" list="brandList">
+            <datalist id="brandList">
+                <option value="gorenje">
+                <option value="耐沃特">
+                <option value="科沃斯">
+                <option value="其他">
+            </datalist>
+        </div>
+        <div class="form-group">
+            <label>📦 商品名称 <span class="required">*</span></label>
+            <input type="text" id="goodsName" required>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label>🔢 商品规格型号</label>
+        <input type="text" id="model">
+    </div>
+
+    <div class="form-row">
+        <div class="form-group">
+            <label>💰 销售价格 <span class="required">*</span></label>
+            <input type="number" id="sellPrice" step="0.01" required oninput="calcDiscount()">
+        </div>
+        <div class="form-group">
+            <label>🏷️ 零售价格 <span class="required">*</span></label>
+            <input type="number" id="retailPrice" step="0.01" required oninput="calcDiscount()">
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label>📊 折扣 <span class="sub-label">（自动计算，保留两位小数）</span></label>
+        <input type="text" id="discount" readonly style="background:#f0f0f0;color:#555;">
+    </div>
+
+    <div class="form-group">
+        <label>💳 收款方式</label>
+        <div style="display:flex;gap:8px;align-items:center;">
+            <input type="text" id="payMethod" list="payMethodList" style="flex:1;">
+            <button type="button" onclick="addPayMethod()" style="padding:8px 14px;background:#e94560;color:#fff;border:none;border-radius:6px;font-size:13px;white-space:nowrap;">+ 新增</button>
+        </div>
+        <datalist id="payMethodList">
+            <option value="佳洛顺驰">
+            <option value="洛高">
+            <option value="商场">
+            <option value="个人">
+            <option value="空白">
+        </datalist>
+        <div class="inline-tip">💡 输入新名称后点击「+ 新增」即可保存</div>
+    </div>
+
+    <div class="form-row">
+        <div class="form-group">
+            <label>💵 收款金额 <span class="required">*</span></label>
+            <input type="number" id="payAmount" step="0.01" required oninput="calcBalance()">
+        </div>
+        <div class="form-group">
+            <label>📌 是否有尾款 <span class="sub-label">（自动计算）</span></label>
+            <input type="text" id="hasBalance" readonly style="background:#f0f0f0;color:#555;" value="—">
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label>🎯 是否国补</label>
+        <select id="subsidy">
+            <option value="否">否</option>
+            <option value="是">是</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label>📍 安装地址</label>
+        <textarea id="installAddress" rows="2"></textarea>
+    </div>
+
+    <div class="form-group">
+        <label>📅 预计安装时间</label>
+        <input type="date" id="installDate">
+    </div>
+
+    <div class="form-group">
+        <label>💳 POS机归属</label>
+        <div style="display:flex;gap:8px;align-items:center;">
+            <input type="text" id="posOwner" list="posOwnerList" style="flex:1;">
+            <button type="button" onclick="addPosOwner()" style="padding:8px 14px;background:#e94560;color:#fff;border:none;border-radius:6px;font-size:13px;white-space:nowrap;">+ 新增</button>
+        </div>
+        <datalist id="posOwnerList">
+            <option value="佳洛顺驰">
+            <option value="洛高">
+            <option value="商场">
+            <option value="个人">
+        </datalist>
+        <div class="inline-tip">💡 输入新名称后点击「+ 新增」即可保存</div>
+    </div>
+
+    <div class="form-row">
+        <div class="form-group">
+            <label>💳 POS机交易金额</label>
+            <input type="number" id="posAmount" step="0.01">
+        </div>
+        <div class="form-group">
+            <label>🎯 补贴金额</label>
+            <input type="number" id="subsidyAmount" step="0.01">
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label>📅 POS机交易日期</label>
+        <input type="date" id="posDate">
+    </div>
+
+    <div class="form-group">
+        <label>📝 备注</label>
+        <textarea id="remark" rows="2"></textarea>
+    </div>
+
+    <button type="button" class="btn-submit" id="submitBtn" onclick="submitOrder()">✅ 提交订单</button>
+</form>
+
+<div class="toast" id="toast"></div>
+
+<script>
+    // ================================================================
+    // Supabase 配置
+    // ================================================================
+    const SUPABASE_URL = 'https://vhdwcxlfjemnkdcoqsph.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZoZHdjeGxmamVtbmtkY29xc3BoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI2MTAyNDQsImV4cCI6MjA5ODE4NjI0NH0.4jlXFZxxfBge-Xr5P9TBHlE2FyHeqvURkJOYdjvA28I';
+
+    function showToast(msg, duration) {
+        duration = duration || 2000;
+        var t = document.getElementById('toast');
+        t.textContent = msg;
+        t.classList.add('show');
+        clearTimeout(t._timer);
+        t._timer = setTimeout(function() { t.classList.remove('show'); }, duration);
+    }
+
+    function getToday() {
+        var d = new Date();
+        var month = String(d.getMonth() + 1).padStart(2, '0');
+        var day = String(d.getDate()).padStart(2, '0');
+        return d.getFullYear() + '-' + month + '-' + day;
+    }
+
+    document.getElementById('orderDate').value = getToday();
+
+    function calcDiscount() {
+        var sell = parseFloat(document.getElementById('sellPrice').value) || 0;
+        var retail = parseFloat(document.getElementById('retailPrice').value) || 0;
+        var discEl = document.getElementById('discount');
+        if (retail > 0 && sell > 0) {
+            // 只保留数字，不带百分号
+            discEl.value = (sell / retail * 100).toFixed(2);
+        } else {
+            discEl.value = '';
+        }
+    }
+
+    function calcBalance() {
+        var sell = parseFloat(document.getElementById('sellPrice').value) || 0;
+        var pay = parseFloat(document.getElementById('payAmount').value) || 0;
+        var balEl = document.getElementById('hasBalance');
+        if (sell > 0) {
+            balEl.value = pay < sell ? '是（欠款：¥' + (sell - pay).toFixed(2) + '）' : '否（已结清）';
+        } else {
+            balEl.value = '—';
+        }
+    }
+
+    async function addPayMethod() {
+        var input = document.getElementById('payMethod');
+        var val = input.value.trim();
+        if (!val) { showToast('请先输入收款方式名称'); return; }
+        try {
+            var resp = await fetch(SUPABASE_URL + '/rest/v1/pay_methods', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': SUPABASE_KEY,
+                    'Authorization': 'Bearer ' + SUPABASE_KEY,
+                    'Prefer': 'return=minimal'
+                },
+                body: JSON.stringify({ name: val })
+            });
+            if (resp.ok) {
+                showToast('✅ 已添加: ' + val);
+                var dl = document.getElementById('payMethodList');
+                var opt = document.createElement('option');
+                opt.value = val;
+                dl.appendChild(opt);
+                input.value = val;
+            } else {
+                var err = await resp.text();
+                showToast('❌ 添加失败: ' + err);
+            }
+        } catch (e) {
+            showToast('❌ 网络错误: ' + e.message);
+        }
+    }
+
+    async function addPosOwner() {
+        var input = document.getElementById('posOwner');
+        var val = input.value.trim();
+        if (!val) { showToast('请先输入POS机归属名称'); return; }
+        try {
+            var resp = await fetch(SUPABASE_URL + '/rest/v1/pos_owners', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': SUPABASE_KEY,
+                    'Authorization': 'Bearer ' + SUPABASE_KEY,
+                    'Prefer': 'return=minimal'
+                },
+                body: JSON.stringify({ name: val })
+            });
+            if (resp.ok) {
+                showToast('✅ 已添加: ' + val);
+                var dl = document.getElementById('posOwnerList');
+                var opt = document.createElement('option');
+                opt.value = val;
+                dl.appendChild(opt);
+                input.value = val;
+            } else {
+                var err = await resp.text();
+                showToast('❌ 添加失败: ' + err);
+            }
+        } catch (e) {
+            showToast('❌ 网络错误: ' + e.message);
+        }
+    }
+
+    async function submitOrder() {
+        var btn = document.getElementById('submitBtn');
+        btn.disabled = true;
+        btn.textContent = '⏳ 提交中...';
+
+        var data = {
+            order_date: document.getElementById('orderDate').value,
+            customer_name: document.getElementById('customerName').value.trim(),
+            phone: document.getElementById('phone').value.trim(),
+            salesperson: document.getElementById('salesperson').value.trim(),
+            sales_channel: document.getElementById('salesChannel').value.trim(),
+            brand: document.getElementById('brand').value.trim(),
+            goods_name: document.getElementById('goodsName').value.trim(),
+            model: document.getElementById('model').value.trim(),
+            sell_price: parseFloat(document.getElementById('sellPrice').value) || 0,
+            retail_price: parseFloat(document.getElementById('retailPrice').value) || 0,
+            discount: document.getElementById('discount').value,
+            pay_method: document.getElementById('payMethod').value.trim(),
+            pay_amount: parseFloat(document.getElementById('payAmount').value) || 0,
+            has_balance: document.getElementById('hasBalance').value,
+            subsidy: document.getElementById('subsidy').value,
+            install_address: document.getElementById('installAddress').value.trim(),
+            install_date: document.getElementById('installDate').value,
+            pos_owner: document.getElementById('posOwner').value.trim(),
+            pos_amount: parseFloat(document.getElementById('posAmount').value) || 0,
+            subsidy_amount: parseFloat(document.getElementById('subsidyAmount').value) || 0,
+            pos_date: document.getElementById('posDate').value,
+            remark: document.getElementById('remark').value.trim()
+        };
+
+        if (!data.order_date) { showToast('请选择订单日期'); btn.disabled = false; btn.textContent = '✅ 提交订单'; return; }
+        if (!data.customer_name) { showToast('请输入客户姓名'); btn.disabled = false; btn.textContent = '✅ 提交订单'; return; }
+        if (!data.phone) { showToast('请输入联系电话'); btn.disabled = false; btn.textContent = '✅ 提交订单'; return; }
+        if (!data.salesperson) { showToast('请输入销售人员'); btn.disabled = false; btn.textContent = '✅ 提交订单'; return; }
+        if (!data.goods_name) { showToast('请输入商品名称'); btn.disabled = false; btn.textContent = '✅ 提交订单'; return; }
+        if (data.sell_price <= 0) { showToast('请输入有效的销售价格'); btn.disabled = false; btn.textContent = '✅ 提交订单'; return; }
+        if (data.retail_price <= 0) { showToast('请输入有效的零售价格'); btn.disabled = false; btn.textContent = '✅ 提交订单'; return; }
+        if (data.pay_amount < 0) { showToast('请输入有效的收款金额'); btn.disabled = false; btn.textContent = '✅ 提交订单'; return; }
+
+        try {
+            var resp = await fetch(SUPABASE_URL + '/rest/v1/orders', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': SUPABASE_KEY,
+                    'Authorization': 'Bearer ' + SUPABASE_KEY,
+                    'Prefer': 'return=minimal'
+                },
+                body: JSON.stringify(data)
+            });
+
+            if (resp.ok) {
+                showToast('✅ 提交成功！');
+                document.getElementById('customerName').value = '';
+                document.getElementById('phone').value = '';
+                document.getElementById('salesperson').value = '';
+                document.getElementById('salesChannel').value = '';
+                document.getElementById('brand').value = '';
+                document.getElementById('goodsName').value = '';
+                document.getElementById('model').value = '';
+                document.getElementById('sellPrice').value = '';
+                document.getElementById('retailPrice').value = '';
+                document.getElementById('discount').value = '';
+                document.getElementById('payAmount').value = '';
+                document.getElementById('hasBalance').value = '—';
+                document.getElementById('installAddress').value = '';
+                document.getElementById('installDate').value = '';
+                document.getElementById('posAmount').value = '';
+                document.getElementById('subsidyAmount').value = '';
+                document.getElementById('posDate').value = '';
+                document.getElementById('remark').value = '';
+                document.getElementById('orderDate').value = getToday();
+            } else {
+                var err = await resp.text();
+                showToast('❌ 提交失败: ' + err);
+            }
+        } catch (e) {
+            showToast('❌ 网络错误: ' + e.message);
+        }
+
+        btn.disabled = false;
+        btn.textContent = '✅ 提交订单';
+    }
+
+    async function loadOptions() {
+        try {
+            var resp1 = await fetch(SUPABASE_URL + '/rest/v1/pay_methods?select=name', {
+                headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+            });
+            if (resp1.ok) {
+                var data1 = await resp1.json();
+                var dl1 = document.getElementById('payMethodList');
+                dl1.innerHTML = '';
+                data1.forEach(function(item) {
+                    var opt = document.createElement('option');
+                    opt.value = item.name;
+                    dl1.appendChild(opt);
+                });
+            }
+
+            var resp2 = await fetch(SUPABASE_URL + '/rest/v1/pos_owners?select=name', {
+                headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+            });
+            if (resp2.ok) {
+                var data2 = await resp2.json();
+                var dl2 = document.getElementById('posOwnerList');
+                dl2.innerHTML = '';
+                data2.forEach(function(item) {
+                    var opt = document.createElement('option');
+                    opt.value = item.name;
+                    dl2.appendChild(opt);
+                });
+            }
+        } catch (e) {
+            console.warn('加载选项失败:', e);
+        }
+    }
+
+    loadOptions();
+</script>
+
+</body>
+</html>
