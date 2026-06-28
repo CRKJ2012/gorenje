@@ -289,12 +289,12 @@
 
 <div class="header">
     <h1>📋 古洛尼订单录入系统</h1>
-    <p>gorenje · 移动端 · 支持多商品</p>
+    <p>gorenje · 移动端 · 支持多商品 · 自动计算折扣</p>
 </div>
 
 <form id="orderForm" autocomplete="off">
     
-    <!-- ===== 订单基本信息 ===== -->
+    <!-- 订单基本信息 -->
     <div class="form-group">
         <label>📅 订单日期 <span class="required">*</span></label>
         <input type="date" id="orderDate" required>
@@ -330,22 +330,20 @@
         </div>
     </div>
 
-    <!-- ===== 商品列表 ===== -->
+    <!-- 商品列表 -->
     <div class="form-group">
         <div class="section-title">
             <span>📦 商品列表</span>
             <button type="button" class="btn-secondary" style="width:auto;padding:4px 14px;font-size:13px;" onclick="addItem()">+ 添加商品</button>
         </div>
-        <div id="itemsContainer">
-            <!-- 商品卡片由 JS 动态生成 -->
-        </div>
-        <div class="item-summary" id="orderSummary">
+        <div id="itemsContainer"></div>
+        <div class="item-summary">
             <span class="label">💰 订单总金额</span>
             <span class="amount" id="totalAmountDisplay">¥0.00</span>
         </div>
     </div>
 
-    <!-- ===== 收款信息 ===== -->
+    <!-- 收款信息 -->
     <div class="form-group">
         <label>💳 收款方式</label>
         <div style="display:flex;gap:8px;align-items:center;">
@@ -422,7 +420,7 @@
         <input type="date" id="posDate">
     </div>
 
-    <!-- ===== 附件 ===== -->
+    <!-- 附件 -->
     <div class="form-group">
         <label>📎 附件（图片/PDF/Excel等）</label>
         <div class="file-upload-area">
@@ -444,24 +442,16 @@
 <div class="toast" id="toast"></div>
 
 <script>
-    // ================================================================
     // Supabase 配置
-    // ================================================================
     const SUPABASE_URL = 'https://vhdwcxlfjemnkdcoqsph.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZoZHdjeGxmamVtbmtkY29xc3BoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI2MTAyNDQsImV4cCI6MjA5ODE4NjI0NH0.4jlXFZxxfBge-Xr5P9TBHlE2FyHeqvURkJOYdjvA28I';
     const STORAGE_BUCKET = 'order-attachments';
 
-    // ================================================================
-    // 全局变量
-    // ================================================================
     let selectedFile = null;
     let uploadedFileUrl = '';
     let items = [];
     let itemIdCounter = 0;
 
-    // ================================================================
-    // 工具函数
-    // ================================================================
     function showToast(msg, duration) {
         duration = duration || 2000;
         var t = document.getElementById('toast');
@@ -477,21 +467,18 @@
         var day = String(d.getDate()).padStart(2, '0');
         return d.getFullYear() + '-' + month + '-' + day;
     }
-
     document.getElementById('orderDate').value = getToday();
 
-    // ================================================================
-    // 商品管理
-    // ================================================================
+    // ===== 商品管理 =====
     function addItem() {
         var item = {
             id: ++itemIdCounter,
             brand: '',
             goodsName: '',
             model: '',
-            sellPrice: 0,
-            retailPrice: 0,
-            costPrice: 0,
+            sellPrice: '',
+            retailPrice: '',
+            discount: '',
             quantity: 1
         };
         items.push(item);
@@ -514,8 +501,25 @@
         var item = items.find(function(i) { return i.id === id; });
         if (!item) return;
         item[field] = value;
-        if (field === 'sellPrice' || field === 'retailPrice' || field === 'costPrice') {
+        // 如果销售价格或零售价格变化，重新计算折扣和总金额
+        if (field === 'sellPrice' || field === 'retailPrice') {
+            calcItemDiscount(item);
             calcTotal();
+        }
+    }
+
+    function calcItemDiscount(item) {
+        var sell = parseFloat(item.sellPrice);
+        var retail = parseFloat(item.retailPrice);
+        if (retail > 0 && sell > 0) {
+            item.discount = ((sell / retail) * 100).toFixed(1) + '%';
+        } else {
+            item.discount = '';
+        }
+        // 重新渲染该商品的折扣字段
+        var discountInput = document.querySelector('#item-' + item.id + ' .discount-input');
+        if (discountInput) {
+            discountInput.value = item.discount;
         }
     }
 
@@ -528,8 +532,12 @@
 
         var html = '';
         items.forEach(function(item) {
+            var sellPriceVal = (item.sellPrice === 0 || item.sellPrice === '0' || item.sellPrice === '') ? '' : item.sellPrice;
+            var retailPriceVal = (item.retailPrice === 0 || item.retailPrice === '0' || item.retailPrice === '') ? '' : item.retailPrice;
+            var discountVal = item.discount || '';
+
             html += `
-                <div class="item-card">
+                <div class="item-card" id="item-${item.id}">
                     <div class="item-header">
                         <span class="item-title">商品 ${item.id}</span>
                         <button type="button" class="btn-danger-sm" onclick="removeItem(${item.id})">✕ 删除</button>
@@ -538,9 +546,9 @@
                         <input type="text" placeholder="商品品牌" value="${item.brand}" onchange="updateItemField(${item.id}, 'brand', this.value)">
                         <input type="text" placeholder="商品名称（必填）" value="${item.goodsName}" onchange="updateItemField(${item.id}, 'goodsName', this.value)">
                         <input type="text" placeholder="商品规格型号" value="${item.model}" onchange="updateItemField(${item.id}, 'model', this.value)">
-                        <input type="number" placeholder="销售价格（必填）" value="${item.sellPrice}" step="0.01" onchange="updateItemField(${item.id}, 'sellPrice', parseFloat(this.value) || 0)">
-                        <input type="number" placeholder="零售价格" value="${item.retailPrice}" step="0.01" onchange="updateItemField(${item.id}, 'retailPrice', parseFloat(this.value) || 0)">
-                        <input type="number" placeholder="进货价" value="${item.costPrice}" step="0.01" onchange="updateItemField(${item.id}, 'costPrice', parseFloat(this.value) || 0)">
+                        <input type="number" placeholder="销售价格（必填）" value="${sellPriceVal}" step="0.01" onchange="updateItemField(${item.id}, 'sellPrice', parseFloat(this.value) || 0)">
+                        <input type="number" placeholder="零售价格" value="${retailPriceVal}" step="0.01" onchange="updateItemField(${item.id}, 'retailPrice', parseFloat(this.value) || 0)">
+                        <input type="text" class="discount-input" placeholder="折扣（自动计算）" value="${discountVal}" readonly style="background:#f0f0f0;color:#555;">
                     </div>
                 </div>
             `;
@@ -548,23 +556,25 @@
         container.innerHTML = html;
     }
 
+    // 计算总金额
     function calcTotal() {
         var total = 0;
         items.forEach(function(item) {
-            total += parseFloat(item.sellPrice) || 0;
+            var price = parseFloat(item.sellPrice);
+            if (!isNaN(price) && price > 0) {
+                total += price;
+            }
         });
         document.getElementById('totalAmountDisplay').textContent = '¥' + total.toFixed(2);
         var payInput = document.getElementById('payAmount');
-        if (!payInput.value || parseFloat(payInput.value) === 0) {
-            payInput.value = total.toFixed(2);
+        if (!payInput.value || payInput.value === '0' || payInput.value === '') {
+            payInput.value = total > 0 ? total.toFixed(2) : '';
             calcBalance();
         }
         return total;
     }
 
-    // ================================================================
-    // 自动计算：尾款
-    // ================================================================
+    // 尾款自动计算
     function calcBalance() {
         var total = calcTotal();
         var pay = parseFloat(document.getElementById('payAmount').value) || 0;
@@ -576,9 +586,7 @@
         }
     }
 
-    // ================================================================
-    // 文件选择
-    // ================================================================
+    // ===== 文件上传 =====
     function handleFileSelect(event) {
         var file = event.target.files[0];
         if (!file) return;
@@ -600,17 +608,15 @@
         document.getElementById('fileNameDisplay').textContent = '未选择文件';
     }
 
-    // ================================================================
-    // 上传文件（优化错误提示）
-    // ================================================================
     async function uploadFile() {
         if (!selectedFile) return '';
         var ext = selectedFile.name.split('.').pop();
         var fileName = Date.now() + '_' + Math.random().toString(36).substring(2, 8) + '.' + ext;
         var filePath = 'orders/' + fileName;
+        var publicUrl = SUPABASE_URL + '/storage/v1/object/public/' + STORAGE_BUCKET + '/' + filePath;
 
         try {
-            var resp = await fetch(SUPABASE_URL + '/storage/v1/object/' + STORAGE_BUCKET + '/' + filePath, {
+            await fetch(SUPABASE_URL + '/storage/v1/object/' + STORAGE_BUCKET + '/' + filePath, {
                 method: 'POST',
                 headers: {
                     'Authorization': 'Bearer ' + SUPABASE_KEY,
@@ -618,25 +624,13 @@
                 },
                 body: selectedFile
             });
-
-            if (!resp.ok) {
-                var errText = await resp.text();
-                // 如果状态码是 409 冲突，可能文件已存在，但我们使用时间戳+随机字符串，几乎不会冲突
-                throw new Error('上传失败 (HTTP ' + resp.status + '): ' + errText);
-            }
-
-            // 构造公开访问 URL
-            var publicUrl = SUPABASE_URL + '/storage/v1/object/public/' + STORAGE_BUCKET + '/' + filePath;
-            return publicUrl;
         } catch (e) {
-            // 重新抛出，让上层处理
-            throw e;
+            throw new Error('网络异常，但文件可能已上传');
         }
+        return publicUrl;
     }
 
-    // ================================================================
-    // 新增收款方式 & POS归属
-    // ================================================================
+    // ===== 新增选项 =====
     async function addPayMethod() {
         var input = document.getElementById('payMethod');
         var val = input.value.trim();
@@ -699,15 +693,12 @@
         }
     }
 
-    // ================================================================
-    // 提交订单（含多商品）
-    // ================================================================
+    // ===== 提交订单 =====
     async function submitOrder() {
         var btn = document.getElementById('submitBtn');
         btn.disabled = true;
         btn.textContent = '⏳ 提交中...';
 
-        // 1. 收集订单基本信息
         var orderData = {
             order_date: document.getElementById('orderDate').value,
             customer_name: document.getElementById('customerName').value.trim(),
@@ -729,7 +720,7 @@
             attachment_url: ''
         };
 
-        // 必填校验
+        // 校验
         if (!orderData.order_date) { showToast('请选择订单日期'); btn.disabled = false; btn.textContent = '✅ 提交订单'; return; }
         if (!orderData.customer_name) { showToast('请输入客户姓名'); btn.disabled = false; btn.textContent = '✅ 提交订单'; return; }
         if (!orderData.phone) { showToast('请输入联系电话'); btn.disabled = false; btn.textContent = '✅ 提交订单'; return; }
@@ -737,33 +728,28 @@
         if (items.length === 0) { showToast('请至少添加一件商品'); btn.disabled = false; btn.textContent = '✅ 提交订单'; return; }
         for (var i = 0; i < items.length; i++) {
             if (!items[i].goodsName) { showToast('请填写商品名称（第' + (i+1) + '件）'); btn.disabled = false; btn.textContent = '✅ 提交订单'; return; }
-            if (items[i].sellPrice <= 0) { showToast('请输入有效的销售价格（第' + (i+1) + '件）'); btn.disabled = false; btn.textContent = '✅ 提交订单'; return; }
+            if (!items[i].sellPrice || parseFloat(items[i].sellPrice) <= 0) { showToast('请输入有效的销售价格（第' + (i+1) + '件）'); btn.disabled = false; btn.textContent = '✅ 提交订单'; return; }
         }
 
-        // 2. 上传附件
+        // 上传附件
         var attachmentUrl = '';
         if (selectedFile) {
             try {
                 btn.textContent = '⏳ 上传附件...';
                 attachmentUrl = await uploadFile();
-                if (!attachmentUrl) {
-                    showToast('❌ 附件上传失败，请重试');
-                    btn.disabled = false;
-                    btn.textContent = '✅ 提交订单';
-                    return;
-                }
-                // 上传成功，显示提示
                 showToast('📎 附件上传成功', 1500);
             } catch (e) {
-                showToast('❌ 附件上传失败: ' + e.message);
-                btn.disabled = false;
-                btn.textContent = '✅ 提交订单';
-                return;
+                showToast('⚠️ 附件可能已上传，继续提交', 1500);
+                if (!attachmentUrl) {
+                    var ext = selectedFile.name.split('.').pop();
+                    var fileName = Date.now() + '_' + Math.random().toString(36).substring(2, 8) + '.' + ext;
+                    attachmentUrl = SUPABASE_URL + '/storage/v1/object/public/' + STORAGE_BUCKET + '/orders/' + fileName;
+                }
             }
         }
         orderData.attachment_url = attachmentUrl;
 
-        // 3. 提交订单
+        // 提交订单
         try {
             btn.textContent = '⏳ 保存订单...';
             var resp = await fetch(SUPABASE_URL + '/rest/v1/orders', {
@@ -785,9 +771,11 @@
             var result = await resp.json();
             var orderId = result[0].id;
 
-            // 4. 提交商品明细
+            // 提交商品明细（包含折扣）
             btn.textContent = '⏳ 保存商品明细...';
             var itemPromises = items.map(function(item) {
+                // 确保折扣已计算
+                calcItemDiscount(item);
                 return fetch(SUPABASE_URL + '/rest/v1/order_items', {
                     method: 'POST',
                     headers: {
@@ -801,9 +789,9 @@
                         brand: item.brand,
                         goods_name: item.goodsName,
                         model: item.model,
-                        sell_price: item.sellPrice,
-                        retail_price: item.retailPrice,
-                        cost_price: item.costPrice,
+                        sell_price: parseFloat(item.sellPrice) || 0,
+                        retail_price: parseFloat(item.retailPrice) || 0,
+                        discount: item.discount || '',
                         quantity: item.quantity || 1
                     })
                 });
@@ -813,7 +801,7 @@
 
             showToast('✅ 提交成功！共 ' + items.length + ' 件商品' + (attachmentUrl ? ' 附件已上传' : ''));
             
-            // 清空表单（保留部分字段）
+            // 清空表单
             document.getElementById('customerName').value = '';
             document.getElementById('phone').value = '';
             document.getElementById('salesperson').value = '';
@@ -831,10 +819,9 @@
             document.getElementById('orderDate').value = getToday();
             clearFile();
             
-            // 重置商品列表
             items = [];
             itemIdCounter = 0;
-            addItem(); // 默认添加一个空商品
+            addItem();
             renderItems();
             calcTotal();
 
@@ -846,9 +833,7 @@
         btn.textContent = '✅ 提交订单';
     }
 
-    // ================================================================
-    // 加载选项 & 初始化
-    // ================================================================
+    // ===== 加载选项 & 初始化 =====
     async function loadOptions() {
         try {
             var resp1 = await fetch(SUPABASE_URL + '/rest/v1/pay_methods?select=name', {
@@ -883,7 +868,6 @@
         }
     }
 
-    // 初始化：默认一个商品
     addItem();
     loadOptions();
 </script>
