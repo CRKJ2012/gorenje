@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>古洛尼订单管理后台</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js">
+    </script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+        body {
+            background: #f0f2f5;
+            padding: 20px;
+        }
+        .header {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: #fff;
+            padding: 20px 30px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .header h1 {
+            font-size: 22px;
+            font-weight: 500;
+            letter-spacing: 2px;
+        }
+        .header .sub {
+            font-size: 13px;
+            color: #aaa;
+        }
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+            background: #fff;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+        .toolbar input,
+        .toolbar select {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            outline: none;
+        }
+        .toolbar input:focus,
+        .toolbar select:focus {
+            border-color: #e94560;
+        }
+        .btn {
+            padding: 8px 18px;
+            border: none;
+            border-radius: 5px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #fff;
+            border: 1px solid #ddd;
+            color: #555;
+        }
+        .btn:hover {
+            border-color: #e94560;
+            color: #e94560;
+        }
+        .btn-primary {
+            background: #e94560;
+            color: #fff;
+            border: none;
+        }
+        .btn-primary:hover {
+            background: #d63850;
+            color: #fff;
+        }
+        .btn-success {
+            background: #27ae60;
+            color: #fff;
+            border: none;
+        }
+        .btn-success:hover {
+            background: #219a52;
+            color: #fff;
+        }
+        .btn-danger {
+            background: #e74c3c;
+            color: #fff;
+            border: none;
+        }
+        .btn-danger:hover {
+            background: #c0392b;
+            color: #fff;
+        }
+        .btn-danger-outline {
+            background: #fff;
+            color: #e74c3c;
+            border: 1px solid #e74c3c;
+        }
+        .btn-danger-outline:hover {
+            background: #e74c3c;
+            color: #fff;
+        }
+        .btn-sm {
+            padding: 4px 10px;
+            font-size: 12px;
+        }
+        .table-wrapper {
+            background: #fff;
+            border-radius: 8px;
+            overflow: auto;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+            max-height: 70vh;
+            position: relative;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            min-width: 1300px;
+        }
+        thead {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        th {
+            background: #f8f9fa;
+            padding: 10px 8px;
+            text-align: left;
+            font-weight: 600;
+            color: #555;
+            border-bottom: 2px solid #eee;
+            white-space: nowrap;
+        }
+        th .th-inner {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        td {
+            padding: 8px;
+            border-bottom: 1px solid #f0f0f0;
+            color: #333;
+            max-width: 150px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        tr:hover {
+            background: #fafafa;
+        }
+        .empty-tip {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        .stats {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+            font-size: 14px;
+            color: #555;
+            align-items: center;
+        }
+        .stats span {
+            background: #fff;
+            padding: 6px 16px;
+            border-radius: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+        .stats .num {
+            color: #e94560;
+            font-weight: 600;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        .filter-label {
+            font-size: 14px;
+            color: #555;
+            margin-right: 4px;
+        }
+        .checkbox-col {
+            width: 32px;
+            text-align: center;
+        }
+        .checkbox-col input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+            accent-color: #e94560;
+        }
+        .action-col {
+            width: 130px;
+            white-space: nowrap;
+            text-align: center;
+        }
+        .action-col .btn {
+            margin: 0 2px;
+        }
+        .batch-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            background: #fff;
+            padding: 8px 16px;
+            border-radius: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+        .batch-actions .count {
+            color: #e94560;
+            font-weight: 600;
+        }
+        .batch-actions .btn {
+            padding: 5px 14px;
+            font-size: 13px;
+        }
+        .hidden {
+            display: none !important;
+        }
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .toolbar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .toolbar input,
+            .toolbar select,
+            .toolbar .btn {
+                width: 100%;
+            }
+            .table-wrapper {
+                max-height: 50vh;
+            }
+            table {
+                font-size: 12px;
+                min-width: 900px;
+            }
+            th,
+            td {
+                padding: 6px 4px;
+            }
+            .action-col {
+                width: 100px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div>
+        <h1>📊 古洛尼订单管理后台</h1>
+        <div class="sub">gorenje × 灿然科技</div>
+    </div>
+    <div>
+        <span id="updateTime" style="font-size:13px;color:#aaa;margin-right:15px;"></span>
+        <button class="btn btn-primary" onclick="loadOrders()" style="margin-right:8px;">🔄 刷新</button>
+        <button class="btn btn-success" onclick="exportExcel()">📤 导出 Excel</button>
+    </div>
+</div>
+
+<!-- 工具栏 -->
+<div class="toolbar">
+    <span class="filter-label">📅 日期范围：</span>
+    <input type="date" id="filterStart" onchange="applyFilter()">
+    <span>至</span>
+    <input type="date" id="filterEnd" onchange="applyFilter()">
+    <span class="filter-label" style="margin-left:10px;">🔍 搜索：</span>
+    <input type="text" id="searchInput" placeholder="客户/电话/商品..." oninput="applyFilter()" style="flex:1;min-width:150px;">
+    <button class="btn" onclick="clearFilter()">清除筛选</button>
+</div>
+
+<!-- 统计 + 批量操作 -->
+<div class="stats" id="stats">
+    <span>📋 总订单: <span class="num" id="totalCount">0</span> 单</span>
+    <span>💰 总销售金额: <span class="num" id="totalAmount">¥0</span></span>
+    <span>📅 显示: <span class="num" id="displayCount">0</span> 条</span>
+    <div class="batch-actions hidden" id="batchActions">
+        <span>已选 <span class="count" id="selectedCount">0</span> 条</span>
+        <button class="btn btn-danger" onclick="batchDelete()">🗑 批量删除</button>
+        <button class="btn btn-default" onclick="clearSelection()">取消选择</button>
+    </div>
+</div>
+
+<!-- 表格 -->
+<div class="table-wrapper" id="tableWrapper">
+    <div class="loading">⏳ 加载中...</div>
+</div>
+
+<script>
+    // ================================================================
+    // Supabase 配置
+    // ================================================================
+    const SUPABASE_URL = 'https://vhdwcxlfjemnkdcoqsph.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZoZHdjeGxmamVtbmtkY29xc3BoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI2MTAyNDQsImV4cCI6MjA5ODE4NjI0NH0.4jlXFZxxfBge-Xr5P9TBHlE2FyHeqvURkJOYdjvA28I';
+
+    let allOrders = [];
+    let filteredOrders = [];
+
+    // ================================================================
+    // 加载数据
+    // ================================================================
+    async function loadOrders() {
+        var wrapper = document.getElementById('tableWrapper');
+        wrapper.innerHTML = '<div class="loading">⏳ 加载中...</div>';
+
+        try {
+            var resp = await fetch(SUPABASE_URL + '/rest/v1/orders?select=*&order=created_at.desc', {
+                headers: {
+                    'apikey': SUPABASE_KEY,
+                    'Authorization': 'Bearer ' + SUPABASE_KEY
+                }
+            });
+
+            if (!resp.ok) {
+                throw new Error('加载失败: ' + resp.status);
+            }
+
+            allOrders = await resp.json();
+            filteredOrders = allOrders.slice();
+
+            document.getElementById('updateTime').textContent = '📌 更新: ' + new Date().toLocaleString();
+
+            updateStats();
+            renderTable();
+            
+            if (window._autoRefresh) clearInterval(window._autoRefresh);
+            window._autoRefresh = setInterval(function() {
+                loadOrdersSilent();
+            }, 30000);
+
+        } catch (e) {
+            wrapper.innerHTML = '<div class="empty-tip">❌ 加载失败: ' + e.message + '<br><br><button class="btn btn-primary" onclick="loadOrders()">重试</button></div>';
+        }
+    }
+
+    async function loadOrdersSilent() {
+        try {
+            var resp = await fetch(SUPABASE_URL + '/rest/v1/orders?select=*&order=created_at.desc', {
+                headers: {
+                    'apikey': SUPABASE_KEY,
+                    'Authorization': 'Bearer ' + SUPABASE_KEY
+                }
+            });
+            if (resp.ok) {
+                var newData = await resp.json();
+                if (newData.length !== allOrders.length) {
+                    allOrders = newData;
+                    filteredOrders = allOrders.slice();
+                    applyFilter();
+                    document.getElementById('updateTime').textContent = '📌 更新: ' + new Date().toLocaleString() + ' (有新数据)';
+                }
+            }
+        } catch (e) {}
+    }
+
+    // ================================================================
+    // 统计 & 筛选
+    // ================================================================
+    function updateStats() {
+        var total = allOrders.length;
+        var totalAmount = 0;
+        allOrders.forEach(function(o) {
+            totalAmount += parseFloat(o.sell_price) || 0;
+        });
+        document.getElementById('totalCount').textContent = total;
+        document.getElementById('totalAmount').textContent = '¥' + totalAmount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        document.getElementById('displayCount').textContent = filteredOrders.length;
+    }
+
+    function applyFilter() {
+        var start = document.getElementById('filterStart').value;
+        var end = document.getElementById('filterEnd').value;
+        var keyword = document.getElementById('searchInput').value.trim().toLowerCase();
+
+        filteredOrders = allOrders.filter(function(order) {
+            if (start && order.order_date && order.order_date < start) return false;
+            if (end && order.order_date && order.order_date > end) return false;
+
+            if (keyword) {
+                var fields = [order.customer_name, order.phone, order.goods_name, order.model, order.salesperson, order.brand];
+                var match = fields.some(function(f) {
+                    return f && f.toLowerCase().includes(keyword);
+                });
+                if (!match) return false;
+            }
+
+            return true;
+        });
+
+        renderTable();
+        updateStats();
+        clearSelection();
+    }
+
+    function clearFilter() {
+        document.getElementById('filterStart').value = '';
+        document.getElementById('filterEnd').value = '';
+        document.getElementById('searchInput').value = '';
+        applyFilter();
+    }
+
+    // ================================================================
+    // 全选 / 取消全选
+    // ================================================================
+    function toggleAllCheckboxes(master) {
+        var checkboxes = document.querySelectorAll('.row-checkbox');
+        checkboxes.forEach(function(cb) {
+            cb.checked = master.checked;
+        });
+        updateBatchActions();
+    }
+
+    function updateBatchActions() {
+        var checked = document.querySelectorAll('.row-checkbox:checked');
+        var count = checked.length;
+        var batchActions = document.getElementById('batchActions');
+        var selectedCount = document.getElementById('selectedCount');
+        
+        if (count > 0) {
+            batchActions.classList.remove('hidden');
+            selectedCount.textContent = count;
+        } else {
+            batchActions.classList.add('hidden');
+        }
+    }
+
+    function clearSelection() {
+        document.querySelectorAll('.row-checkbox').forEach(function(cb) {
+            cb.checked = false;
+        });
+        var master = document.getElementById('masterCheckbox');
+        if (master) master.checked = false;
+        updateBatchActions();
+    }
+
+    // ================================================================
+    // 单条删除
+    // ================================================================
+    async function deleteOrder(id, customerName) {
+        if (!confirm('确定要删除 "' + customerName + '" 的订单吗？此操作不可恢复！')) return;
+
+        try {
+            var resp = await fetch(SUPABASE_URL + '/rest/v1/orders?id=eq.' + id, {
+                method: 'DELETE',
+                headers: {
+                    'apikey': SUPABASE_KEY,
+                    'Authorization': 'Bearer ' + SUPABASE_KEY
+                }
+            });
+
+            if (resp.ok) {
+                alert('✅ 删除成功！');
+                loadOrders();
+            } else {
+                var err = await resp.text();
+                alert('❌ 删除失败: ' + err);
+            }
+        } catch (e) {
+            alert('❌ 网络错误: ' + e.message);
+        }
+    }
+
+    // ================================================================
+    // 批量删除
+    // ================================================================
+    async function batchDelete() {
+        var checked = document.querySelectorAll('.row-checkbox:checked');
+        if (checked.length === 0) {
+            alert('请至少选择一条记录');
+            return;
+        }
+
+        var ids = [];
+        var names = [];
+        checked.forEach(function(cb) {
+            ids.push(cb.value);
+            names.push(cb.dataset.name || '未命名');
+        });
+
+        if (!confirm('确定要删除选中的 ' + ids.length + ' 条订单吗？\n客户：' + names.join('、') + '\n此操作不可恢复！')) return;
+
+        var btn = document.querySelector('.batch-actions .btn-danger');
+        var originalText = btn.textContent;
+        btn.textContent = '⏳ 删除中...';
+        btn.disabled = true;
+
+        var successCount = 0;
+        var failCount = 0;
+
+        for (var i = 0; i < ids.length; i++) {
+            try {
+                var resp = await fetch(SUPABASE_URL + '/rest/v1/orders?id=eq.' + ids[i], {
+                    method: 'DELETE',
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': 'Bearer ' + SUPABASE_KEY
+                    }
+                });
+                if (resp.ok) {
+                    successCount++;
+                } else {
+                    failCount++;
+                }
+            } catch (e) {
+                failCount++;
+            }
+        }
+
+        btn.textContent = originalText;
+        btn.disabled = false;
+
+        alert('✅ 删除完成！\n成功：' + successCount + ' 条\n失败：' + failCount + ' 条');
+        loadOrders();
+    }
+
+    // ================================================================
+    // 渲染表格
+    // ================================================================
+    function renderTable() {
+        var wrapper = document.getElementById('tableWrapper');
+
+        if (filteredOrders.length === 0) {
+            wrapper.innerHTML = '<div class="empty-tip">📭 暂无匹配的订单数据</div>';
+            return;
+        }
+
+        var headers = [
+            '', // 复选框列
+            '序号', '单号', '订单来源', '订单日期', '客户姓名', '联系电话', '销售人员', '销售渠道',
+            '商品品牌', '商品名称', '商品规格型号', '销售价格', '零售价格', '折扣',
+            '收款方式', '收款金额', '是否有尾款', '是否国补', '安装地址', '预计安装时间',
+            'POS机归属', 'POS机交易金额', '补贴金额', 'POS机交易日期', '备注',
+            '操作'
+        ];
+
+        var html = '<table><thead><tr>';
+        html += '<th class="checkbox-col"><input type="checkbox" id="masterCheckbox" onchange="toggleAllCheckboxes(this)"></th>';
+        for (var i = 1; i < headers.length; i++) {
+            html += '<th>' + headers[i] + '</th>';
+        }
+        html += '</tr></thead><tbody>';
+
+        filteredOrders.forEach(function(order, index) {
+            html += '<tr>';
+            html += '<td class="checkbox-col"><input type="checkbox" class="row-checkbox" value="' + order.id + '" data-name="' + (order.customer_name || '') + '" onchange="updateBatchActions()"></td>';
+            html += '<td>' + (index + 1) + '</td>';
+            html += '<td>' + (order.id || '') + '</td>';
+            html += '<td>' + (order.order_source || '销售单') + '</td>';
+            html += '<td>' + (order.order_date || '') + '</td>';
+            html += '<td>' + (order.customer_name || '') + '</td>';
+            html += '<td>' + (order.phone || '') + '</td>';
+            html += '<td>' + (order.salesperson || '') + '</td>';
+            html += '<td>' + (order.sales_channel || '') + '</td>';
+            html += '<td>' + (order.brand || '') + '</td>';
+            html += '<td>' + (order.goods_name || '') + '</td>';
+            html += '<td>' + (order.model || '') + '</td>';
+            html += '<td>' + (order.sell_price || 0) + '</td>';
+            html += '<td>' + (order.retail_price || 0) + '</td>';
+            html += '<td>' + (order.discount || '') + '</td>';
+            html += '<td>' + (order.pay_method || '') + '</td>';
+            html += '<td>' + (order.pay_amount || 0) + '</td>';
+            html += '<td>' + (order.has_balance || '') + '</td>';
+            html += '<td>' + (order.subsidy || '否') + '</td>';
+            html += '<td>' + (order.install_address || '') + '</td>';
+            html += '<td>' + (order.install_date || '') + '</td>';
+            html += '<td>' + (order.pos_owner || '') + '</td>';
+            html += '<td>' + (order.pos_amount || 0) + '</td>';
+            html += '<td>' + (order.subsidy_amount || 0) + '</td>';
+            html += '<td>' + (order.pos_date || '') + '</td>';
+            html += '<td>' + (order.remark || '') + '</td>';
+            html += '<td class="action-col">';
+            html += '<button class="btn btn-danger btn-sm" onclick="deleteOrder(' + order.id + ', \'' + (order.customer_name || '') + '\')">删除</button>';
+            html += '</td>';
+            html += '</tr>';
+        });
+
+        html += '</tbody></table>';
+        wrapper.innerHTML = html;
+        updateBatchActions();
+    }
+
+    // ================================================================
+    // 导出 Excel（精确到每一条）
+    // ================================================================
+    function exportExcel() {
+        if (filteredOrders.length === 0) {
+            alert('当前没有数据可导出');
+            return;
+        }
+
+        var headers = [
+            '序号', '单号', '订单来源', '订单日期', '客户姓名', '联系电话', '销售人员', '销售渠道',
+            '商品品牌', '商品名称', '商品规格型号', '销售价格', '零售价格', '折扣',
+            '收款方式', '收款金额', '是否有尾款', '是否国补', '安装地址', '预计安装时间',
+            'POS机归属', 'POS机交易金额', '补贴金额', 'POS机交易日期', '备注'
+        ];
+
+        var rows = [];
+        rows.push(headers);
+
+        filteredOrders.forEach(function(order, index) {
+            var row = [
+                index + 1,
+                order.id || '',
+                order.order_source || '销售单',
+                order.order_date || '',
+                order.customer_name || '',
+                order.phone || '',
+                order.salesperson || '',
+                order.sales_channel || '',
+                order.brand || '',
+                order.goods_name || '',
+                order.model || '',
+                order.sell_price || 0,
+                order.retail_price || 0,
+                order.discount || '',
+                order.pay_method || '',
+                order.pay_amount || 0,
+                order.has_balance || '',
+                order.subsidy || '否',
+                order.install_address || '',
+                order.install_date || '',
+                order.pos_owner || '',
+                order.pos_amount || 0,
+                order.subsidy_amount || 0,
+                order.pos_date || '',
+                order.remark || ''
+            ];
+            rows.push(row);
+        });
+
+        var wb = XLSX.utils.book_new();
+        var ws = XLSX.utils.aoa_to_sheet(rows);
+
+        var colWidths = headers.map(function() { return { wch: 16 }; });
+        ws['!cols'] = colWidths;
+
+        XLSX.utils.book_append_sheet(wb, ws, '汇总表');
+
+        var fileName = '古洛尼订单_导出_' + new Date().toISOString().slice(0, 10) + '.xlsx';
+        XLSX.writeFile(wb, fileName);
+    }
+
+    // ================================================================
+    // 启动
+    // ================================================================
+    loadOrders();
+</script>
+
+</body>
+</html>
