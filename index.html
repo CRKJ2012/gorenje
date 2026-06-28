@@ -288,8 +288,8 @@
 <body>
 
 <div class="header">
-    <h1>📋 古洛尼订单录入系统  移动端</h1>
-    <p>gorenje · 灿然科技 </p>
+    <h1>📋 古洛尼订单录入系统</h1>
+    <p>gorenje · 移动端 · 支持多商品</p>
 </div>
 
 <form id="orderForm" autocomplete="off">
@@ -303,22 +303,22 @@
     <div class="form-row">
         <div class="form-group">
             <label>👤 客户姓名 <span class="required">*</span></label>
-            <input type="text" id="customerName" required>
+            <input type="text" id="customerName" placeholder="请输入客户姓名" required>
         </div>
         <div class="form-group">
             <label>📞 联系电话 <span class="required">*</span></label>
-            <input type="tel" id="phone" required>
+            <input type="tel" id="phone" placeholder="请输入手机号" required>
         </div>
     </div>
 
     <div class="form-row">
         <div class="form-group">
             <label>👔 销售人员 <span class="required">*</span></label>
-            <input type="text" id="salesperson" required>
+            <input type="text" id="salesperson" placeholder="请输入销售人员姓名" required>
         </div>
         <div class="form-group">
             <label>📢 销售渠道</label>
-            <input type="text" id="salesChannel" list="channelList">
+            <input type="text" id="salesChannel" placeholder="如：异业推荐、楼盘" list="channelList">
             <datalist id="channelList">
                 <option value="异业推荐">
                 <option value="楼盘">
@@ -349,7 +349,7 @@
     <div class="form-group">
         <label>💳 收款方式</label>
         <div style="display:flex;gap:8px;align-items:center;">
-            <input type="text" id="payMethod" list="payMethodList" style="flex:1;">
+            <input type="text" id="payMethod" placeholder="选择或输入收款方式" list="payMethodList" style="flex:1;">
             <button type="button" onclick="addPayMethod()" style="padding:8px 14px;background:#e94560;color:#fff;border:none;border-radius:6px;font-size:13px;white-space:nowrap;">+ 新增</button>
         </div>
         <datalist id="payMethodList">
@@ -365,7 +365,7 @@
     <div class="form-row">
         <div class="form-group">
             <label>💵 收款金额 <span class="required">*</span></label>
-            <input type="number" id="payAmount" step="0.01" required oninput="calcBalance()">
+            <input type="number" id="payAmount" step="0.01" placeholder="请输入收款金额" required oninput="calcBalance()">
         </div>
         <div class="form-group">
             <label>📌 是否有尾款 <span class="sub-label">（自动计算）</span></label>
@@ -383,7 +383,7 @@
 
     <div class="form-group">
         <label>📍 安装地址</label>
-        <textarea id="installAddress" rows="2"></textarea>
+        <textarea id="installAddress" rows="2" placeholder="请输入详细安装地址"></textarea>
     </div>
 
     <div class="form-group">
@@ -394,7 +394,7 @@
     <div class="form-group">
         <label>💳 POS机归属</label>
         <div style="display:flex;gap:8px;align-items:center;">
-            <input type="text" id="posOwner" list="posOwnerList" style="flex:1;">
+            <input type="text" id="posOwner" placeholder="选择或输入POS机归属" list="posOwnerList" style="flex:1;">
             <button type="button" onclick="addPosOwner()" style="padding:8px 14px;background:#e94560;color:#fff;border:none;border-radius:6px;font-size:13px;white-space:nowrap;">+ 新增</button>
         </div>
         <datalist id="posOwnerList">
@@ -409,11 +409,11 @@
     <div class="form-row">
         <div class="form-group">
             <label>💳 POS机交易金额</label>
-            <input type="number" id="posAmount" step="0.01">
+            <input type="number" id="posAmount" step="0.01" placeholder="0.00">
         </div>
         <div class="form-group">
             <label>🎯 补贴金额</label>
-            <input type="number" id="subsidyAmount" step="0.01">
+            <input type="number" id="subsidyAmount" step="0.01" placeholder="0.00">
         </div>
     </div>
 
@@ -435,7 +435,7 @@
 
     <div class="form-group">
         <label>📝 备注</label>
-        <textarea id="remark" rows="2"></textarea>
+        <textarea id="remark" rows="2" placeholder="其他需要备注的信息"></textarea>
     </div>
 
     <button type="button" class="btn-submit" id="submitBtn" onclick="submitOrder()">✅ 提交订单</button>
@@ -514,7 +514,6 @@
         var item = items.find(function(i) { return i.id === id; });
         if (!item) return;
         item[field] = value;
-        // 如果是价格变化，重新计算总金额
         if (field === 'sellPrice' || field === 'retailPrice' || field === 'costPrice') {
             calcTotal();
         }
@@ -537,9 +536,9 @@
                     </div>
                     <div class="item-fields">
                         <input type="text" placeholder="商品品牌" value="${item.brand}" onchange="updateItemField(${item.id}, 'brand', this.value)">
-                        <input type="text" placeholder="商品名称" value="${item.goodsName}" onchange="updateItemField(${item.id}, 'goodsName', this.value)">
+                        <input type="text" placeholder="商品名称（必填）" value="${item.goodsName}" onchange="updateItemField(${item.id}, 'goodsName', this.value)">
                         <input type="text" placeholder="商品规格型号" value="${item.model}" onchange="updateItemField(${item.id}, 'model', this.value)">
-                        <input type="number" placeholder="销售价格" value="${item.sellPrice}" step="0.01" onchange="updateItemField(${item.id}, 'sellPrice', parseFloat(this.value) || 0)">
+                        <input type="number" placeholder="销售价格（必填）" value="${item.sellPrice}" step="0.01" onchange="updateItemField(${item.id}, 'sellPrice', parseFloat(this.value) || 0)">
                         <input type="number" placeholder="零售价格" value="${item.retailPrice}" step="0.01" onchange="updateItemField(${item.id}, 'retailPrice', parseFloat(this.value) || 0)">
                         <input type="number" placeholder="进货价" value="${item.costPrice}" step="0.01" onchange="updateItemField(${item.id}, 'costPrice', parseFloat(this.value) || 0)">
                     </div>
@@ -555,7 +554,6 @@
             total += parseFloat(item.sellPrice) || 0;
         });
         document.getElementById('totalAmountDisplay').textContent = '¥' + total.toFixed(2);
-        // 自动填充收款金额为总金额
         var payInput = document.getElementById('payAmount');
         if (!payInput.value || parseFloat(payInput.value) === 0) {
             payInput.value = total.toFixed(2);
@@ -603,7 +601,7 @@
     }
 
     // ================================================================
-    // 上传文件
+    // 上传文件（优化错误提示）
     // ================================================================
     async function uploadFile() {
         if (!selectedFile) return '';
@@ -623,12 +621,15 @@
 
             if (!resp.ok) {
                 var errText = await resp.text();
-                throw new Error('上传失败: ' + errText);
+                // 如果状态码是 409 冲突，可能文件已存在，但我们使用时间戳+随机字符串，几乎不会冲突
+                throw new Error('上传失败 (HTTP ' + resp.status + '): ' + errText);
             }
 
-            return SUPABASE_URL + '/storage/v1/object/public/' + STORAGE_BUCKET + '/' + filePath;
+            // 构造公开访问 URL
+            var publicUrl = SUPABASE_URL + '/storage/v1/object/public/' + STORAGE_BUCKET + '/' + filePath;
+            return publicUrl;
         } catch (e) {
-            showToast('❌ 附件上传失败: ' + e.message);
+            // 重新抛出，让上层处理
             throw e;
         }
     }
@@ -746,13 +747,15 @@
                 btn.textContent = '⏳ 上传附件...';
                 attachmentUrl = await uploadFile();
                 if (!attachmentUrl) {
-                    showToast('附件上传失败，请重试');
+                    showToast('❌ 附件上传失败，请重试');
                     btn.disabled = false;
                     btn.textContent = '✅ 提交订单';
                     return;
                 }
+                // 上传成功，显示提示
+                showToast('📎 附件上传成功', 1500);
             } catch (e) {
-                showToast('❌ 附件上传异常: ' + e.message);
+                showToast('❌ 附件上传失败: ' + e.message);
                 btn.disabled = false;
                 btn.textContent = '✅ 提交订单';
                 return;
@@ -810,7 +813,7 @@
 
             showToast('✅ 提交成功！共 ' + items.length + ' 件商品' + (attachmentUrl ? ' 附件已上传' : ''));
             
-            // 清空表单
+            // 清空表单（保留部分字段）
             document.getElementById('customerName').value = '';
             document.getElementById('phone').value = '';
             document.getElementById('salesperson').value = '';
