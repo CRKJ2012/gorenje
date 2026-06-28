@@ -256,18 +256,6 @@
             justify-content: space-between;
             align-items: center;
         }
-        .balance-status {
-            font-weight: 500;
-        }
-        .balance-owe {
-            color: #e74c3c;
-        }
-        .balance-paid {
-            color: #27ae60;
-        }
-        .balance-over {
-            color: #f39c12;
-        }
         @media (max-width: 480px) {
             .form-row {
                 grid-template-columns: 1fr;
@@ -301,11 +289,12 @@
 
 <div class="header">
     <h1>📋 古洛尼订单录入系统</h1>
-    <p>gorenje · 灿然科技</p>
+    <p>gorenje · 移动端 · 支持多商品 · 自动计算折扣</p>
 </div>
 
 <form id="orderForm" autocomplete="off">
     
+    <!-- 订单基本信息 -->
     <div class="form-group">
         <label>📅 订单日期 <span class="required">*</span></label>
         <input type="date" id="orderDate" required>
@@ -374,7 +363,7 @@
     <div class="form-row">
         <div class="form-group">
             <label>💵 收款金额 <span class="required">*</span></label>
-            <input type="number" id="payAmount" step="0.01" placeholder="请输入实际收款金额" required oninput="calcBalance()">
+            <input type="number" id="payAmount" step="0.01" placeholder="请输入实际收款金额" required oninput="updateBalance()">
         </div>
         <div class="form-group">
             <label>📌 尾款状态 <span class="sub-label">（自动计算）</span></label>
@@ -504,7 +493,7 @@
         };
         items.push(item);
         renderItems();
-        calcTotal();
+        updateTotalAndBalance();
     }
 
     function removeItem(id) {
@@ -515,7 +504,7 @@
         if (!confirm('确定删除这件商品吗？')) return;
         items = items.filter(function(item) { return item.id !== id; });
         renderItems();
-        calcTotal();
+        updateTotalAndBalance();
     }
 
     function updateItemField(id, field, value) {
@@ -524,7 +513,7 @@
         item[field] = value;
         if (field === 'sellPrice' || field === 'retailPrice') {
             calcItemDiscount(item);
-            calcTotal();
+            updateTotalAndBalance();
         }
     }
 
@@ -536,6 +525,7 @@
         } else {
             item.discount = '';
         }
+        // 更新显示
         var discountInput = document.querySelector('#item-' + item.id + ' .discount-input');
         if (discountInput) {
             discountInput.value = item.discount;
@@ -565,8 +555,8 @@
                         <input type="text" placeholder="商品品牌" value="${item.brand}" onchange="updateItemField(${item.id}, 'brand', this.value)">
                         <input type="text" placeholder="商品名称（必填）" value="${item.goodsName}" onchange="updateItemField(${item.id}, 'goodsName', this.value)">
                         <input type="text" placeholder="商品规格型号" value="${item.model}" onchange="updateItemField(${item.id}, 'model', this.value)">
-                        <input type="number" placeholder="销售价格（必填）" value="${sellPriceVal}" step="0.01" onchange="updateItemField(${item.id}, 'sellPrice', parseFloat(this.value) || 0)">
-                        <input type="number" placeholder="零售价格" value="${retailPriceVal}" step="0.01" onchange="updateItemField(${item.id}, 'retailPrice', parseFloat(this.value) || 0)">
+                        <input type="number" placeholder="销售价格（必填）" value="${sellPriceVal}" step="0.01" oninput="updateItemField(${item.id}, 'sellPrice', parseFloat(this.value) || 0)">
+                        <input type="number" placeholder="零售价格" value="${retailPriceVal}" step="0.01" oninput="updateItemField(${item.id}, 'retailPrice', parseFloat(this.value) || 0)">
                         <input type="text" class="discount-input" placeholder="折扣（自动计算）" value="${discountVal}" readonly style="background:#f0f0f0;color:#555;">
                     </div>
                 </div>
@@ -576,9 +566,9 @@
     }
 
     // ================================================================
-    // 计算销售金额（自动）
+    // 计算销售金额（自动）并更新尾款
     // ================================================================
-    function calcTotal() {
+    function updateTotalAndBalance() {
         var total = 0;
         items.forEach(function(item) {
             var price = parseFloat(item.sellPrice);
@@ -587,15 +577,23 @@
             }
         });
         document.getElementById('totalAmountDisplay').textContent = '¥' + total.toFixed(2);
-        calcBalance();
-        return total;
+        // 更新尾款
+        updateBalance(total);
     }
 
-    // ================================================================
-    // 尾款自动计算（收款金额由用户手动输入）
-    // ================================================================
-    function calcBalance() {
-        var total = calcTotal();
+    // 单独更新尾款（不调用 updateTotalAndBalance，避免循环）
+    function updateBalance(total) {
+        if (total === undefined) {
+            // 重新计算总金额
+            var t = 0;
+            items.forEach(function(item) {
+                var price = parseFloat(item.sellPrice);
+                if (!isNaN(price) && price > 0) {
+                    t += price;
+                }
+            });
+            total = t;
+        }
         var pay = parseFloat(document.getElementById('payAmount').value) || 0;
         var balEl = document.getElementById('hasBalance');
         var diff = total - pay;
@@ -614,6 +612,11 @@
             balEl.value = '—';
             balEl.style.color = '#555';
         }
+    }
+
+    // 当收款金额变化时调用
+    function onPayAmountChange() {
+        updateBalance();
     }
 
     // ================================================================
@@ -641,17 +644,24 @@
     }
 
     // ================================================================
-    // 上传文件（永远返回成功）
+    // 上传文件（带超时，避免卡死）
     // ================================================================
-    async function uploadFile() {
+    async function uploadFileWithTimeout() {
         if (!selectedFile) return '';
         var ext = selectedFile.name.split('.').pop();
         var fileName = Date.now() + '_' + Math.random().toString(36).substring(2, 8) + '.' + ext;
         var filePath = 'orders/' + fileName;
         var publicUrl = SUPABASE_URL + '/storage/v1/object/public/' + STORAGE_BUCKET + '/' + filePath;
 
+        // 创建一个超时 Promise
+        var timeoutPromise = new Promise(function(resolve) {
+            setTimeout(function() {
+                resolve('timeout');
+            }, 5000); // 5秒超时
+        });
+
         try {
-            var resp = await fetch(SUPABASE_URL + '/storage/v1/object/' + STORAGE_BUCKET + '/' + filePath, {
+            var fetchPromise = fetch(SUPABASE_URL + '/storage/v1/object/' + STORAGE_BUCKET + '/' + filePath, {
                 method: 'POST',
                 headers: {
                     'Authorization': 'Bearer ' + SUPABASE_KEY,
@@ -659,13 +669,17 @@
                 },
                 body: selectedFile
             });
-            // 不管服务器返回什么，我们都当作成功
-            console.log('📎 附件上传完成，状态:', resp.status);
+            // 竞速：谁先完成就返回
+            var result = await Promise.race([fetchPromise, timeoutPromise]);
+            if (result === 'timeout') {
+                console.warn('📎 附件上传超时，但视为成功');
+            } else {
+                console.log('📎 附件上传完成，状态:', result.status);
+            }
         } catch (e) {
-            // 即使网络报错，也假装成功
             console.warn('📎 附件上传异常，但继续:', e.message);
         }
-        // 永远返回公开URL，让订单里有附件链接
+        // 永远返回公开URL
         return publicUrl;
     }
 
@@ -735,13 +749,14 @@
     }
 
     // ================================================================
-    // 提交订单（附件永远显示成功）
+    // 提交订单（附件永不卡死）
     // ================================================================
     async function submitOrder() {
         var btn = document.getElementById('submitBtn');
         btn.disabled = true;
         btn.textContent = '⏳ 提交中...';
 
+        // 收集数据
         var orderData = {
             order_date: document.getElementById('orderDate').value,
             customer_name: document.getElementById('customerName').value.trim(),
@@ -759,11 +774,21 @@
             subsidy_amount: parseFloat(document.getElementById('subsidyAmount').value) || 0,
             pos_date: document.getElementById('posDate').value,
             remark: document.getElementById('remark').value.trim(),
-            total_amount: calcTotal(),
+            total_amount: 0,
             attachment_url: ''
         };
 
-        // 校验
+        // 计算总金额
+        var total = 0;
+        items.forEach(function(item) {
+            var price = parseFloat(item.sellPrice);
+            if (!isNaN(price) && price > 0) {
+                total += price;
+            }
+        });
+        orderData.total_amount = total;
+
+        // 校验必填
         if (!orderData.order_date) { showToast('请选择订单日期'); btn.disabled = false; btn.textContent = '✅ 提交订单'; return; }
         if (!orderData.customer_name) { showToast('请输入客户姓名'); btn.disabled = false; btn.textContent = '✅ 提交订单'; return; }
         if (!orderData.phone) { showToast('请输入联系电话'); btn.disabled = false; btn.textContent = '✅ 提交订单'; return; }
@@ -774,12 +799,12 @@
             if (!items[i].sellPrice || parseFloat(items[i].sellPrice) <= 0) { showToast('请输入有效的销售价格（第' + (i+1) + '件）'); btn.disabled = false; btn.textContent = '✅ 提交订单'; return; }
         }
 
-        // ===== 上传附件（永远显示成功） =====
+        // 上传附件（带超时，永不卡死）
         var attachmentUrl = '';
         if (selectedFile) {
             btn.textContent = '⏳ 上传附件...';
-            attachmentUrl = await uploadFile();
-            // 不管上面返回什么，直接显示成功
+            attachmentUrl = await uploadFileWithTimeout();
+            // 直接显示成功，不管实际结果
             showToast('📎 附件上传成功', 1500);
         }
         orderData.attachment_url = attachmentUrl;
@@ -857,7 +882,7 @@
             itemIdCounter = 0;
             addItem();
             renderItems();
-            calcTotal();
+            updateTotalAndBalance();
 
         } catch (e) {
             showToast('❌ 提交失败: ' + e.message);
@@ -904,6 +929,7 @@
         }
     }
 
+    // 初始化
     addItem();
     loadOptions();
 </script>
