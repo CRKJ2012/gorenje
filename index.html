@@ -3,16 +3,28 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>超人游戏 v1.1.1</title>
+<title>超人游戏 v1.3.0</title>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  body {
-    margin: 0; background: #111; color: #eee;
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    background: #111; color: #eee;
     font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
-    min-height: 100vh; overflow: hidden;
+    overflow: hidden;
+    user-select: none; -webkit-user-select: none;
   }
-  .panel { width: 100%; max-width: 480px; margin: 0 auto; padding: 20px; }
-  h1 { font-size: 20px; margin: 0 0 20px; text-align: center; }
+
+  .screen {
+    position: fixed; inset: 0;
+    display: flex; flex-direction: column;
+    overflow-y: auto;
+    padding: 16px;
+  }
+  .screen.hidden { display: none !important; }
+
+  .container { width: 100%; max-width: 720px; margin: 0 auto; }
+
+  h1 { font-size: 20px; margin: 0 0 16px; text-align: center; }
   .field { margin-bottom: 12px; }
   .field label { display: block; font-size: 13px; color: #888; margin-bottom: 6px; }
   .field input, .field select {
@@ -35,6 +47,7 @@
   .status.ok { color: #30d158; }
   .status.err { color: #ff453a; }
   .hidden { display: none !important; }
+
   .code-display {
     background: #2c2c2e; border-radius: 10px;
     padding: 20px; text-align: center; margin-bottom: 12px;
@@ -45,13 +58,15 @@
   }
   .code-display .label { font-size: 13px; color: #888; margin-bottom: 8px; }
   .divider { text-align: center; color: #555; font-size: 13px; margin: 20px 0; }
+  .version { text-align: center; color: #555; font-size: 12px; padding: 24px 0 12px; }
 
   .topbar {
     display: flex; justify-content: space-between; align-items: center;
-    padding: 12px 16px; background: #1c1c1e;
+    padding: 10px 16px; background: #1c1c1e;
     border-bottom: 1px solid #2c2c2e;
-    position: sticky; top: 0; z-index: 50;
+    flex-shrink: 0;
   }
+  .topbar.hidden { display: none !important; }
   .topbar .user-info { display: flex; align-items: center; gap: 10px; }
   .topbar .avatar {
     width: 36px; height: 36px; border-radius: 50%;
@@ -138,7 +153,6 @@
     background: #fff; transition: transform .2s;
   }
   .toggle.on::after { transform: translateX(22px); }
-  .version { text-align: center; color: #555; font-size: 12px; padding: 24px 0 12px; }
 
   .invite-modal {
     position: fixed; inset: 0; background: rgba(0,0,0,.6);
@@ -153,21 +167,16 @@
   .invite-modal .box h3 { margin: 0 0 8px; font-size: 18px; }
   .invite-modal .box p { color: #888; font-size: 14px; margin: 0 0 20px; }
 
-  /* ========== 选人页 - 横排滑动 ========== */
-  #view-select {
-    max-height: 100vh;
-    overflow-y: auto;
-    padding-bottom: 40px;
-  }
-  .char-scroll {
+  /* 选人页 */
+  #view-select .char-scroll {
     width: 100%;
     overflow-x: auto;
     overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
-    margin: 16px 0;
+    margin: 12px 0;
     padding: 8px 0;
   }
-  .char-scroll::-webkit-scrollbar { display: none; }
+  #view-select .char-scroll::-webkit-scrollbar { display: none; }
   .char-grid {
     display: flex;
     gap: 12px;
@@ -209,29 +218,30 @@
     margin-bottom: 16px; min-height: 20px;
   }
 
-  /* ========== 战斗页 ========== */
+  /* ========== 战斗页（俯视角） ========== */
   #view-game {
     position: fixed; inset: 0;
-    background-color: #222;
+    background-color: #1a1a2e;
     background-image: url('assets/bg/bg_battle.png');
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
     display: flex; flex-direction: column;
-    z-index: 10;
+    z-index: 100;
     overflow: hidden;
   }
   #view-game.hidden { display: none !important; }
 
   .battle-top {
-    display: flex; align-items: flex-start; justify-content: space-between;
-    padding: 12px 16px; gap: 12px;
-    background: linear-gradient(to bottom, rgba(0,0,0,.6), transparent);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 16px; gap: 16px;
+    background: linear-gradient(to bottom, rgba(0,0,0,.75), transparent);
     z-index: 5;
+    flex-shrink: 0;
   }
-  .battle-side { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+  .battle-side { flex: 1; display: flex; flex-direction: column; gap: 4px; }
   .battle-side.right { align-items: flex-end; }
-  .battle-hp-row { width: 100%; max-width: 220px; }
+  .battle-hp-row { width: 100%; max-width: 280px; }
   .battle-hp-row.right { display: flex; flex-direction: column; align-items: flex-end; }
   .battle-hp-name {
     font-size: 12px; color: #fff; margin-bottom: 2px;
@@ -250,90 +260,117 @@
   .battle-hp-row.dead { opacity: .3; }
 
   .battle-timer {
-    font-size: 28px; font-weight: 700; color: #fff;
+    font-size: 24px; font-weight: 700; color: #fff;
     font-family: monospace;
     text-shadow: 0 2px 4px rgba(0,0,0,.8);
-    min-width: 80px; text-align: center;
-    padding-top: 6px;
+    min-width: 70px; text-align: center;
   }
 
-  .battle-center {
+  .battle-arena {
     flex: 1;
     position: relative;
     overflow: hidden;
+    background: rgba(0,0,0,.15);
   }
 
   .fighter {
     position: absolute;
-    width: 100px;
-    height: 120px;
+    width: 80px;
+    height: 80px;
     display: flex;
-    align-items: flex-end;
+    align-items: center;
     justify-content: center;
-    transition: left .05s linear;
+    transition: left .05s linear, top .05s linear;
+    z-index: 2;
   }
-  .fighter.left { bottom: 30%; }
-  .fighter.right { bottom: 30%; }
+  .fighter .sprite {
+    width: 100%; height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+  }
   .fighter img {
     max-width: 100%; max-height: 100%;
     object-fit: contain;
-    filter: drop-shadow(0 4px 8px rgba(0,0,0,.5));
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,.6));
+    pointer-events: none;
   }
   .fighter .placeholder {
-    width: 80px; height: 100px;
+    width: 60px; height: 60px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 36px; font-weight: 700; color: #fff;
-    border-radius: 8px;
+    font-size: 28px; font-weight: 700; color: #fff;
+    border-radius: 50%;
   }
-  .fighter.stunned { filter: brightness(1.5) hue-rotate(180deg); }
-  .fighter.hit-flash { animation: hitFlash .2s; }
+  .fighter.hit-flash { animation: hitFlash .25s; }
   @keyframes hitFlash {
     0%, 100% { filter: brightness(1); }
-    50% { filter: brightness(2) drop-shadow(0 0 10px red); }
+    50% { filter: brightness(2) drop-shadow(0 0 12px red); }
+  }
+  .fighter-name {
+    position: absolute;
+    top: -18px; left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px; color: #fff;
+    background: rgba(0,0,0,.6);
+    padding: 2px 8px; border-radius: 8px;
+    white-space: nowrap;
+    text-shadow: 0 1px 2px rgba(0,0,0,.8);
   }
 
   .effect-layer {
     position: absolute; inset: 0; pointer-events: none;
-    z-index: 4;
+    z-index: 3;
   }
   .skill-effect {
     position: absolute;
     pointer-events: none;
-    animation: skillFly .4s linear forwards;
+    transform-origin: center center;
+    animation: skillFly .5s ease-out forwards;
+  }
+  .skill-effect img {
+    width: 100%; height: 100%;
+    object-fit: contain;
+    pointer-events: none;
   }
   @keyframes skillFly {
-    from { opacity: 1; transform: scale(.5); }
-    to { opacity: 0; transform: scale(1.5); }
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(.4) rotate(0deg); }
+    30% { opacity: 1; }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(1.8) rotate(20deg); }
   }
 
   .battle-bottom {
     display: flex; justify-content: space-between; align-items: flex-end;
-    padding: 16px;
-    background: linear-gradient(to top, rgba(0,0,0,.5), transparent);
-    min-height: 180px;
+    padding: 12px 16px 16px;
+    background: linear-gradient(to top, rgba(0,0,0,.6), transparent);
+    flex-shrink: 0;
+    position: relative;
+    min-height: 150px;
     z-index: 5;
   }
 
   .joystick {
-    width: 120px; height: 120px;
+    width: 110px; height: 110px;
     border-radius: 50%;
     background: rgba(255,255,255,.1);
     border: 2px solid rgba(255,255,255,.3);
     position: relative;
     touch-action: none;
+    user-select: none;
   }
   .joystick-knob {
-    width: 56px; height: 56px;
+    width: 52px; height: 52px;
     border-radius: 50%;
-    background: rgba(255,255,255,.5);
+    background: rgba(255,255,255,.55);
     position: absolute; top: 50%; left: 50%;
     transform: translate(-50%, -50%);
     transition: transform .05s;
+    pointer-events: none;
   }
 
   .skill-arc {
     position: relative;
-    width: 210px; height: 190px;
+    width: 200px; height: 150px;
   }
   .skill-btn {
     position: absolute;
@@ -361,33 +398,33 @@
   }
 
   .skill-btn.attack {
-    width: 80px; height: 80px;
+    width: 70px; height: 70px;
     right: 0; bottom: 0;
     background: rgba(48,209,88,.85);
     font-size: 14px;
   }
   .skill-btn.skill {
-    width: 68px; height: 68px;
-    right: 76px; bottom: 30px;
+    width: 60px; height: 60px;
+    right: 64px; bottom: 26px;
     background: rgba(255,159,10,.85);
   }
   .skill-btn.heal {
-    width: 62px; height: 62px;
-    right: 120px; bottom: 76px;
+    width: 56px; height: 56px;
+    right: 106px; bottom: 66px;
     background: rgba(255,69,58,.85);
   }
   .skill-btn.ultimate {
-    width: 72px; height: 72px;
-    right: 130px; bottom: -10px;
+    width: 64px; height: 64px;
+    right: 116px; bottom: -6px;
     background: rgba(191,90,242,.9);
-    font-size: 13px;
+    font-size: 12px;
   }
 
   .battle-toast {
-    position: fixed; top: 45%; left: 50%;
+    position: fixed; top: 40%; left: 50%;
     transform: translate(-50%, -50%);
     background: rgba(0,0,0,.85);
-    color: #fff; padding: 16px 32px;
+    color: #fff; padding: 14px 28px;
     border-radius: 12px; font-size: 20px; font-weight: 700;
     z-index: 300; pointer-events: none;
     animation: toastIn .3s;
@@ -396,9 +433,63 @@
     from { opacity: 0; transform: translate(-50%, -80%); }
     to { opacity: 1; transform: translate(-50%, -50%); }
   }
+
+  .keyboard-hint {
+    position: fixed; top: 8px; left: 8px;
+    color: #888; font-size: 11px; z-index: 20;
+    pointer-events: none;
+    background: rgba(0,0,0,.4);
+    padding: 4px 8px; border-radius: 6px;
+  }
+
+  /* 强制横屏遮罩 */
+  #rotate-overlay {
+    position: fixed; inset: 0;
+    background: #0a0a0f;
+    z-index: 9999;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    text-align: center;
+    padding: 40px;
+  }
+  #rotate-overlay .icon {
+    font-size: 72px;
+    margin-bottom: 24px;
+    animation: rotateHint 2s ease-in-out infinite;
+  }
+  @keyframes rotateHint {
+    0%, 100% { transform: rotate(0deg); }
+    50% { transform: rotate(90deg); }
+  }
+  #rotate-overlay .text {
+    font-size: 18px;
+    color: #aaa;
+  }
+  #rotate-overlay .sub {
+    font-size: 13px;
+    color: #666;
+    margin-top: 8px;
+  }
+
+  /* 竖屏时显示遮罩（只在战斗页） */
+  @media (orientation: portrait) {
+    body.in-battle #rotate-overlay {
+      display: flex;
+    }
+  }
 </style>
 </head>
 <body>
+
+<!-- 强制横屏遮罩 -->
+<div id="rotate-overlay">
+  <div class="icon">📱</div>
+  <div class="text">请横屏使用</div>
+  <div class="sub">横过来才能开始战斗</div>
+</div>
 
 <div class="topbar hidden" id="topbar">
   <div class="user-info">
@@ -416,8 +507,8 @@
   </div>
 </div>
 
-<div class="panel">
-  <div id="view-login">
+<div class="screen hidden" id="view-login">
+  <div class="container">
     <h1>登录</h1>
     <div class="field">
       <label>账号ID（纯数字）</label>
@@ -431,8 +522,10 @@
     <div class="switch" id="to-register">没有账号？去注册</div>
     <div class="status" id="login-status"></div>
   </div>
+</div>
 
-  <div id="view-register" class="hidden">
+<div class="screen hidden" id="view-register">
+  <div class="container">
     <h1>注册</h1>
     <div class="field">
       <label>账号ID（纯数字，唯一）</label>
@@ -458,18 +551,22 @@
     <div class="switch" id="to-login">已有账号？去登录</div>
     <div class="status" id="register-status"></div>
   </div>
+</div>
 
-  <div id="view-home" class="hidden">
+<div class="screen hidden" id="view-home">
+  <div class="container">
     <h1>大厅</h1>
     <button class="btn" id="btn-create-room">创建房间</button>
     <div class="divider">或者</div>
     <input id="input-code" placeholder="输入6位分享码" maxlength="6" autocomplete="off"
            style="width:100%; padding:14px; background:#2c2c2e; border:1px solid #3a3a3c; border-radius:10px; color:#fff; font-size:18px; text-align:center; letter-spacing:4px; margin-bottom:12px; font-family:monospace;">
     <button class="btn secondary" id="btn-join">加入房间</button>
-    <div class="version">v1.1.1</div>
+    <div class="version">v1.3.0</div>
   </div>
+</div>
 
-  <div id="view-host" class="hidden">
+<div class="screen hidden" id="view-host">
+  <div class="container">
     <h1>等待加入</h1>
     <div class="code-display">
       <div class="label">分享码（发给同学）</div>
@@ -480,9 +577,10 @@
     <button class="btn secondary" id="btn-invite-friend">邀请好友</button>
     <button class="btn secondary" id="btn-cancel-host" style="margin-top:4px;">取消</button>
   </div>
+</div>
 
-  <!-- 选人页 - 横排滑动 -->
-  <div id="view-select" class="hidden">
+<div class="screen hidden" id="view-select">
+  <div class="container">
     <h1>选择角色</h1>
     <div class="status" id="select-status">请选择 2 个角色</div>
     <div class="char-scroll">
@@ -493,17 +591,17 @@
   </div>
 </div>
 
-<!-- 战斗页 -->
 <div id="view-game" class="hidden">
+  <div class="keyboard-hint">键盘：WASD 移动　J 普攻　K 技能　L 回血　U 必杀</div>
   <div class="battle-top">
     <div class="battle-side left" id="battle-side-left"></div>
     <div class="battle-timer" id="battle-timer">01:00</div>
     <div class="battle-side right" id="battle-side-right"></div>
   </div>
-  <div class="battle-center" id="battle-center">
+  <div class="battle-arena" id="battle-arena">
     <div class="effect-layer" id="effect-layer"></div>
-    <div class="fighter left" id="fighter-left"></div>
-    <div class="fighter right" id="fighter-right"></div>
+    <div class="fighter" id="fighter-left"></div>
+    <div class="fighter" id="fighter-right"></div>
   </div>
   <div class="battle-bottom">
     <div class="joystick" id="joystick">
@@ -518,7 +616,6 @@
   </div>
 </div>
 
-<!-- 好友抽屉 -->
 <div class="drawer-overlay" id="friends-overlay"></div>
 <div class="drawer" id="friends-drawer">
   <div class="drawer-header">
@@ -553,7 +650,6 @@
   </div>
 </div>
 
-<!-- 设置抽屉 -->
 <div class="drawer-overlay" id="settings-overlay"></div>
 <div class="drawer" id="settings-drawer">
   <div class="drawer-header">
@@ -571,7 +667,7 @@
     </div>
     <div class="setting-row" style="border:none; margin-top:20px;">
       <div class="label">版本</div>
-      <div style="color:#888; font-size:14px;">v1.1.1</div>
+      <div style="color:#888; font-size:14px;">v1.3.0</div>
     </div>
     <button class="btn secondary" id="btn-logout" style="margin-top:30px;">退出登录</button>
   </div>
@@ -594,7 +690,6 @@ let inviteChannel = null;
 let selectChannel = null;
 let battleChannel = null;
 
-// ---------- 设置 ----------
 const SETTINGS_KEY = 'game_settings';
 let settings = { bgm: true, sfx: true };
 try {
@@ -603,7 +698,6 @@ try {
 } catch {}
 function saveSettings() { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); }
 
-// ---------- 音频 ----------
 const AUDIO_PATHS = {
   bgmLobby: 'assets/bgm/bgm_lobby.mp3',
   bgmBattle: 'assets/bgm/bgm_battle.mp3',
@@ -621,7 +715,7 @@ function initAudio() {
     a.preload = 'auto';
     if (key.startsWith('bgm')) { a.loop = true; a.volume = 0.5; }
     else { a.volume = 0.7; }
-    a.addEventListener('error', () => { /* 文件不存在，静默忽略 */ });
+    a.addEventListener('error', () => {});
     audio[key] = a;
   }
 }
@@ -652,7 +746,6 @@ function playSfx(key) {
 document.addEventListener('touchstart', unlockAudio, { once: true });
 document.addEventListener('click', unlockAudio, { once: true });
 
-// ---------- 工具 ----------
 async function hashPassword(password, salt) {
   const data = new TextEncoder().encode(password + '::' + salt);
   const buf = await crypto.subtle.digest('SHA-256', data);
@@ -685,7 +778,18 @@ function saveLogin(a, p) { localStorage.setItem(SAVED_KEY, JSON.stringify({ acco
 function getSavedLogin() { try { return JSON.parse(localStorage.getItem(SAVED_KEY)); } catch { return null; } }
 function clearSavedLogin() { localStorage.removeItem(SAVED_KEY); }
 
-// ---------- 角色数据 ----------
+// 技能特效图路径映射
+const EFFECT_IMAGES = {
+  xu_shenghao_skill: 'assets/effects/effect_cake.png',
+  xu_shenghao_ultimate: 'assets/effects/effect_charge.png',
+  yang_hairong_skill: 'assets/effects/effect_dog.png',
+  yang_hairong_ultimate: 'assets/effects/effect_goat.png',
+  kang_ruixi_skill: 'assets/effects/effect_slap.png',
+  kang_ruixi_ultimate: 'assets/effects/effect_press.png',
+  du_haoze_skill: 'assets/effects/effect_ball.png',
+  du_haoze_ultimate: 'assets/effects/effect_cig.png'
+};
+
 const CHARACTERS = {
   xu_shenghao: {
     id: 'xu_shenghao', name: '徐晟皓', color: '#ff6b6b',
@@ -723,7 +827,6 @@ const CHARACTERS = {
 
 let myPicked = [];
 
-// ---------- 视图 ----------
 const views = {
   login: document.getElementById('view-login'),
   register: document.getElementById('view-register'),
@@ -736,7 +839,9 @@ const topbar = document.getElementById('topbar');
 function showView(name) {
   Object.values(views).forEach(v => v.classList.add('hidden'));
   views[name].classList.remove('hidden');
-  topbar.classList.toggle('hidden', name === 'login' || name === 'register');
+  topbar.classList.toggle('hidden', name === 'login' || name === 'register' || name === 'game');
+  // 战斗页强制横屏
+  document.body.classList.toggle('in-battle', name === 'game');
   if (name === 'login' || name === 'register' || name === 'home' || name === 'host' || name === 'select') {
     playBgm('bgmLobby');
   } else if (name === 'game') {
@@ -754,7 +859,6 @@ function refreshTopbar() {
   document.getElementById('topbar-account').textContent = '@' + currentPlayer.account_id;
 }
 
-// ---------- 注册 ----------
 document.getElementById('btn-register').onclick = async () => {
   const accountId = document.getElementById('reg-account').value.trim();
   const nickname = document.getElementById('reg-nickname').value.trim();
@@ -794,7 +898,6 @@ document.getElementById('btn-register').onclick = async () => {
   }
 };
 
-// ---------- 登录 ----------
 document.getElementById('btn-login').onclick = async () => {
   const accountId = document.getElementById('login-account').value.trim();
   const password = document.getElementById('login-password').value;
@@ -837,7 +940,6 @@ async function loginWith(accountId, password) {
   loadFriendBadge();
 }
 
-// ---------- 退出 ----------
 document.getElementById('btn-logout').onclick = () => {
   clearSavedLogin();
   sessionStorage.removeItem('player');
@@ -852,7 +954,6 @@ document.getElementById('btn-logout').onclick = () => {
   setStatus(document.getElementById('login-status'), '已退出');
 };
 
-// ---------- 创建房间 ----------
 document.getElementById('btn-create-room').onclick = async () => {
   const btn = document.getElementById('btn-create-room');
   btn.disabled = true;
@@ -880,7 +981,6 @@ document.getElementById('btn-create-room').onclick = async () => {
   }
 };
 
-// ---------- 加入房间 ----------
 document.getElementById('btn-join').onclick = async () => {
   const code = document.getElementById('input-code').value.trim().toUpperCase();
   if (code.length !== 6) return alert('请输入6位分享码');
@@ -918,7 +1018,6 @@ async function joinRoomByCode(code) {
   enterSelectPage();
 }
 
-// ---------- 复制 ----------
 document.getElementById('btn-copy').onclick = async () => {
   const code = document.getElementById('display-code').textContent;
   try {
@@ -935,13 +1034,11 @@ document.getElementById('btn-copy').onclick = async () => {
   }
 };
 
-// ---------- 邀请好友 ----------
 document.getElementById('btn-invite-friend').onclick = () => {
   openFriends();
   switchFriendTab('friends');
 };
 
-// ---------- 取消 / 离开 ----------
 document.getElementById('btn-cancel-host').onclick = async () => {
   if (currentRoom) await supabase.from('rooms').delete().eq('id', currentRoom.id);
   leaveRoom();
@@ -953,10 +1050,10 @@ function leaveRoom() {
   });
   realtimeChannel = selectChannel = battleChannel = null;
   currentRoom = null;
+  document.body.classList.remove('in-battle');
   showView('home');
 }
 
-// ---------- 订阅房间 ----------
 function subscribeRoom(code) {
   if (realtimeChannel) supabase.removeChannel(realtimeChannel);
   realtimeChannel = supabase
@@ -974,7 +1071,6 @@ function subscribeRoom(code) {
     .subscribe((status) => console.log('Room Realtime:', status));
 }
 
-// ---------- 选人页 ----------
 function enterSelectPage() {
   if (!views.select.classList.contains('hidden')) return;
   myPicked = [];
@@ -1073,12 +1169,17 @@ function subscribeSelect() {
 function checkBothReady() {
   const room = currentRoom;
   if (room.host_ready && room.guest_ready && room.host_picks && room.guest_picks) {
-    if (!battleChannel) startBattle(room);
+    if (battleChannel) return;
+    if (room.host_id === currentPlayer.id) {
+      initBattleChannel(room, true);
+    } else {
+      initBattleChannel(room, false);
+    }
   }
 }
 
 // ============================================================
-//                   战 斗 系 统
+//                   战 斗 系 统（俯视角）
 // ============================================================
 
 const battle = {
@@ -1093,21 +1194,65 @@ const battle = {
   myMaxHp: 0,
   oppMaxHp: 0,
   myCd: { skill: 0, heal: 0, ultimate: 0 },
-  oppCd: { skill: 0, heal: 0, ultimate: 0 },
-  myPos: 0.5,
-  oppPos: 0.5,
-  myFacing: 1,
+  myX: 0.2, myY: 0.5,
+  oppX: 0.8, oppY: 0.5,
   myStunned: 0,
-  oppStunned: 0,
   timer: 60,
   timerInterval: null,
   tickInterval: null,
-  joystickDir: 0
+  joyDX: 0, joyDY: 0,
+  keyW: false, keyA: false, keyS: false, keyD: false
 };
 
+function initBattleChannel(room, isHost) {
+  battle.isHost = isHost;
+
+  if (battleChannel) supabase.removeChannel(battleChannel);
+  battleChannel = supabase.channel('battle_' + room.id);
+
+  battleChannel
+    .on('broadcast', { event: 'start' }, () => {
+      startBattle(room);
+    })
+    .on('broadcast', { event: 'state' }, ({ payload }) => {
+      if (payload.from === currentPlayer.id) return;
+      battle.oppX = payload.x;
+      battle.oppY = payload.y;
+      battle.oppIndex = payload.index;
+      battle.oppHp = payload.hp;
+      updateOpponentDisplay();
+    })
+    .on('broadcast', { event: 'hit' }, ({ payload }) => {
+      if (payload.to !== currentPlayer.id) return;
+      applyDamageToMe(payload.damage, payload.effect);
+    })
+    .on('broadcast', { event: 'swap' }, ({ payload }) => {
+      if (payload.from === currentPlayer.id) return;
+      battle.oppIndex = payload.index;
+      battle.oppHp = CHARACTERS[battle.oppPicks[battle.oppIndex]].hp;
+      updateOpponentDisplay();
+    })
+    .on('broadcast', { event: 'end' }, ({ payload }) => {
+      if (payload.from === currentPlayer.id) return;
+      endBattle(payload.reason, true);
+    })
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED' && isHost) {
+        setTimeout(() => {
+          battleChannel.send({
+            type: 'broadcast',
+            event: 'start',
+            payload: { from: currentPlayer.id }
+          });
+          startBattle(room);
+        }, 300);
+      }
+    });
+}
+
 function startBattle(room) {
+  if (battle.active) return;
   battle.active = true;
-  battle.isHost = room.host_id === currentPlayer.id;
   battle.myPicks = battle.isHost ? room.host_picks : room.guest_picks;
   battle.oppPicks = battle.isHost ? room.guest_picks : room.host_picks;
 
@@ -1118,19 +1263,16 @@ function startBattle(room) {
   battle.myHp = battle.myMaxHp;
   battle.oppHp = battle.oppMaxHp;
   battle.myCd = { skill: 0, heal: 0, ultimate: 0 };
-  battle.oppCd = { skill: 0, heal: 0, ultimate: 0 };
-  battle.myPos = 0.25;
-  battle.oppPos = 0.75;
-  battle.myFacing = 1;
+  battle.myX = 0.2;
+  battle.myY = 0.5;
+  battle.oppX = 0.8;
+  battle.oppY = 0.5;
   battle.myStunned = 0;
-  battle.oppStunned = 0;
   battle.timer = 60;
 
   renderBattleUI();
   showView('game');
   playBgm('bgmBattle');
-
-  subscribeBattle();
 
   if (battle.tickInterval) clearInterval(battle.tickInterval);
   battle.tickInterval = setInterval(battleTick, 100);
@@ -1151,7 +1293,6 @@ function renderBattleUI() {
   renderHpSide('battle-side-right', battle.myPicks, battle.myIndex, battle.myHp, battle.myMaxHp, 'left');
   renderFighter('fighter-left', battle.oppPicks[battle.oppIndex], true);
   renderFighter('fighter-right', battle.myPicks[battle.myIndex], false);
-  // 初始位置
   requestAnimationFrame(() => updateFighterPositions());
   updateTimer();
   updateCooldownUI();
@@ -1181,24 +1322,38 @@ function renderFighter(containerId, charId, isOpponent) {
   const el = document.getElementById(containerId);
   const c = CHARACTERS[charId];
   el.innerHTML = `
-    <img src="${c.img}" alt="${c.name}"
-         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
-         style="${isOpponent ? 'transform: scaleX(-1);' : ''}">
-    <div class="placeholder" style="display:none; background:${c.color};">${c.name[0]}</div>
+    <div class="sprite">
+      <img src="${c.img}" alt="${c.name}"
+           onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+      <div class="placeholder" style="display:none; background:${c.color};">${c.name[0]}</div>
+    </div>
+    <div class="fighter-name">${c.name}</div>
   `;
 }
 
 function updateFighterPositions() {
-  const center = document.getElementById('battle-center');
-  const left = document.getElementById('fighter-left');
-  const right = document.getElementById('fighter-right');
-  if (!center || !left || !right) return;
+  const arena = document.getElementById('battle-arena');
+  if (!arena) return;
+  const w = arena.offsetWidth;
+  const h = arena.offsetHeight;
+  const size = 80;
 
-  const w = center.offsetWidth;
-  const leftX = battle.oppPos * (w - 100);
-  const rightX = battle.myPos * (w - 100);
-  left.style.left = leftX + 'px';
-  right.style.left = rightX + 'px';
+  const myEl = document.getElementById('fighter-right');
+  const oppEl = document.getElementById('fighter-left');
+  if (myEl) {
+    myEl.style.left = (battle.myX * (w - size)) + 'px';
+    myEl.style.top = (battle.myY * (h - size)) + 'px';
+  }
+  if (oppEl) {
+    oppEl.style.left = (battle.oppX * (w - size)) + 'px';
+    oppEl.style.top = (battle.oppY * (h - size)) + 'px';
+  }
+}
+
+function updateOpponentDisplay() {
+  updateFighterPositions();
+  renderHpSide('battle-side-left', battle.oppPicks, battle.oppIndex,
+    battle.oppHp, CHARACTERS[battle.oppPicks[battle.oppIndex]].hp, 'right');
 }
 
 function updateTimer() {
@@ -1239,14 +1394,26 @@ function battleTick() {
     if (battle.myCd[k] > 0) battle.myCd[k]--;
   }
   if (battle.myStunned > 0) battle.myStunned--;
-  if (battle.oppStunned > 0) battle.oppStunned--;
 
-  if (battle.myStunned <= 0 && battle.joystickDir !== 0) {
-    const speed = CHARACTERS[battle.myPicks[battle.myIndex]].speed * 0.003;
-    battle.myPos += battle.joystickDir * speed;
-    battle.myPos = Math.max(0, Math.min(1, battle.myPos));
-    updateFighterPositions();
-    broadcastState();
+  let dx = battle.joyDX;
+  let dy = battle.joyDY;
+  if (battle.keyW) dy = -1;
+  else if (battle.keyS) dy = 1;
+  if (battle.keyA) dx = -1;
+  else if (battle.keyD) dx = 1;
+
+  if (battle.myStunned <= 0 && (dx !== 0 || dy !== 0)) {
+    const c = CHARACTERS[battle.myPicks[battle.myIndex]];
+    const speed = c.speed * 0.0035;
+    const len = Math.hypot(dx, dy);
+    if (len > 0) {
+      battle.myX += (dx / len) * speed;
+      battle.myY += (dy / len) * speed;
+      battle.myX = Math.max(0, Math.min(1, battle.myX));
+      battle.myY = Math.max(0, Math.min(1, battle.myY));
+      updateFighterPositions();
+      broadcastState();
+    }
   }
 
   updateCooldownUI();
@@ -1259,7 +1426,8 @@ function broadcastState() {
       event: 'state',
       payload: {
         from: currentPlayer.id,
-        pos: battle.myPos,
+        x: battle.myX,
+        y: battle.myY,
         index: battle.myIndex,
         hp: battle.myHp,
         stunned: battle.myStunned > 0
@@ -1268,66 +1436,38 @@ function broadcastState() {
   }
 }
 
-function subscribeBattle() {
-  if (battleChannel) supabase.removeChannel(battleChannel);
-  battleChannel = supabase.channel('battle_' + currentRoom.id);
-
-  battleChannel
-    .on('broadcast', { event: 'state' }, ({ payload }) => {
-      if (payload.from === currentPlayer.id) return;
-      battle.oppPos = payload.pos;
-      battle.oppIndex = payload.index;
-      battle.oppHp = payload.hp;
-      updateFighterPositions();
-      renderHpSide('battle-side-left', battle.oppPicks, battle.oppIndex, battle.oppHp, CHARACTERS[battle.oppPicks[battle.oppIndex]].hp, 'right');
-    })
-    .on('broadcast', { event: 'hit' }, ({ payload }) => {
-      if (payload.to !== currentPlayer.id) return;
-      applyDamageToMe(payload.damage, payload.effect);
-    })
-    .on('broadcast', { event: 'swap' }, ({ payload }) => {
-      if (payload.from === currentPlayer.id) return;
-      battle.oppIndex = payload.index;
-      battle.oppHp = CHARACTERS[battle.oppPicks[battle.oppIndex]].hp;
-      renderFighter('fighter-left', battle.oppPicks[battle.oppIndex], true);
-      renderHpSide('battle-side-left', battle.oppPicks, battle.oppIndex, battle.oppHp, battle.oppHp, 'right');
-    })
-    .on('broadcast', { event: 'end' }, ({ payload }) => {
-      if (payload.from === currentPlayer.id) return;
-      endBattle(payload.reason, true);
-    })
-    .subscribe((status) => console.log('Battle channel:', status));
+function distToOpp() {
+  const dx = battle.myX - battle.oppX;
+  const dy = battle.myY - battle.oppY;
+  return Math.hypot(dx, dy);
 }
 
-// ---------- 攻击动作 ----------
-document.getElementById('btn-attack').onclick = () => {
+function doAttack() {
   if (!battle.active || battle.myStunned > 0) return;
   const c = CHARACTERS[battle.myPicks[battle.myIndex]];
-  const dist = Math.abs(battle.myPos - battle.oppPos);
   playSfx('sfxAttack');
-  if (dist < 0.25) {
+  if (distToOpp() < 0.22) {
     sendHit(c.attack, 'none');
-    showEffect('attack');
   }
-};
+}
 
-document.getElementById('btn-skill').onclick = () => {
+function doSkill() {
   if (!battle.active || battle.myStunned > 0) return;
   if (battle.myCd.skill > 0) return;
   const c = CHARACTERS[battle.myPicks[battle.myIndex]];
   battle.myCd.skill = c.skill.cd * 10;
   playSfx('sfxSkill');
-  showEffect('skill', c.skill.type);
+  showEffect(battle.myPicks[battle.myIndex], 'skill', battle.myX, battle.myY);
 
-  const dist = Math.abs(battle.myPos - battle.oppPos);
-  if (c.skill.type === 'fan' && dist < 0.4) {
+  const d = distToOpp();
+  if (c.skill.type === 'fan' && d < 0.35) {
     sendHit(c.skill.damage, c.skill.effect || 'none');
-  } else if (c.skill.type === 'line' && dist < 0.6) {
+  } else if (c.skill.type === 'line' && d < 0.5) {
     sendHit(c.skill.damage, c.skill.effect || 'none');
   }
-};
+}
 
-document.getElementById('btn-heal').onclick = () => {
+function doHeal() {
   if (!battle.active || battle.myStunned > 0) return;
   if (battle.myCd.heal > 0) return;
   const c = CHARACTERS[battle.myPicks[battle.myIndex]];
@@ -1337,23 +1477,28 @@ document.getElementById('btn-heal').onclick = () => {
   showToast(`+${c.heal.value} HP`);
   renderHpSide('battle-side-right', battle.myPicks, battle.myIndex, battle.myHp, battle.myMaxHp, 'left');
   broadcastState();
-};
+}
 
-document.getElementById('btn-ultimate').onclick = () => {
+function doUltimate() {
   if (!battle.active || battle.myStunned > 0) return;
   if (battle.myCd.ultimate > 0) return;
   const c = CHARACTERS[battle.myPicks[battle.myIndex]];
   battle.myCd.ultimate = c.ultimate.cd * 10;
   playSfx('sfxUltimate');
-  showEffect('ultimate', c.ultimate.type);
+  showEffect(battle.myPicks[battle.myIndex], 'ultimate', battle.myX, battle.myY);
 
-  const dist = Math.abs(battle.myPos - battle.oppPos);
+  const d = distToOpp();
   if (c.ultimate.type === 'full' || c.ultimate.type === 'lock') {
     sendHit(c.ultimate.damage, 'none');
-  } else if (c.ultimate.type === 'line' && dist < 0.8) {
+  } else if (c.ultimate.type === 'line' && d < 0.7) {
     sendHit(c.ultimate.damage, 'knockback');
   }
-};
+}
+
+document.getElementById('btn-attack').onclick = doAttack;
+document.getElementById('btn-skill').onclick = doSkill;
+document.getElementById('btn-heal').onclick = doHeal;
+document.getElementById('btn-ultimate').onclick = doUltimate;
 
 function sendHit(damage, effect) {
   if (!battleChannel) return;
@@ -1374,13 +1519,17 @@ function applyDamageToMe(damage, effect) {
     battle.myStunned = 15;
     showToast('被眩晕！', 1200);
   } else if (effect === 'knockback') {
-    battle.myPos = Math.min(1, battle.myPos + 0.1);
+    const dx = battle.myX - battle.oppX;
+    const dy = battle.myY - battle.oppY;
+    const d = Math.hypot(dx, dy) || 1;
+    battle.myX = Math.max(0, Math.min(1, battle.myX + dx / d * 0.12));
+    battle.myY = Math.max(0, Math.min(1, battle.myY + dy / d * 0.12));
     updateFighterPositions();
   }
 
   const fighter = document.getElementById('fighter-right');
   fighter.classList.add('hit-flash');
-  setTimeout(() => fighter.classList.remove('hit-flash'), 200);
+  setTimeout(() => fighter.classList.remove('hit-flash'), 250);
 
   renderHpSide('battle-side-right', battle.myPicks, battle.myIndex, battle.myHp, battle.myMaxHp, 'left');
   broadcastState();
@@ -1411,19 +1560,52 @@ function handleMyDeath() {
   }
 }
 
-function showEffect(type, skillType) {
+// 特效显示：加载对应角色的技能图
+function showEffect(charId, type, x, y) {
   const layer = document.getElementById('effect-layer');
+  const arena = document.getElementById('battle-arena');
+  if (!layer || !arena) return;
+  const w = arena.offsetWidth;
+  const h = arena.offsetHeight;
+
   const effect = document.createElement('div');
   effect.className = 'skill-effect';
-  const color = type === 'ultimate' ? '#bf5af2' : type === 'skill' ? '#ff9f0a' : '#30d158';
+
+  // 尺寸：普攻小，技能中，必杀大
+  const size = type === 'ultimate' ? 160 : type === 'skill' ? 120 : 80;
   effect.style.cssText = `
-    left: 50%; top: 40%;
-    width: 100px; height: 100px;
-    background: radial-gradient(circle, ${color}, transparent);
-    border-radius: 50%;
+    left: ${x * w}px; top: ${y * h}px;
+    width: ${size}px; height: ${size}px;
   `;
+
+  const key = `${charId}_${type}`;
+  const imgPath = EFFECT_IMAGES[key];
+
+  if (imgPath) {
+    const img = document.createElement('img');
+    img.src = imgPath;
+    img.alt = '';
+    // 图片加载失败时降级成色块
+    img.onerror = () => {
+      img.remove();
+      const fallback = document.createElement('div');
+      const color = type === 'ultimate' ? '#bf5af2' : type === 'skill' ? '#ff9f0a' : '#30d158';
+      fallback.style.cssText = `
+        width: 100%; height: 100%;
+        background: radial-gradient(circle, ${color}, transparent);
+        border-radius: 50%;
+      `;
+      effect.appendChild(fallback);
+    };
+    effect.appendChild(img);
+  } else {
+    const color = type === 'ultimate' ? '#bf5af2' : type === 'skill' ? '#ff9f0a' : '#30d158';
+    effect.style.background = `radial-gradient(circle, ${color}, transparent)`;
+    effect.style.borderRadius = '50%';
+  }
+
   layer.appendChild(effect);
-  setTimeout(() => effect.remove(), 400);
+  setTimeout(() => effect.remove(), 600);
 }
 
 function endBattle(reason, fromOpponent = false) {
@@ -1468,50 +1650,91 @@ const joystick = document.getElementById('joystick');
 const joystickKnob = document.getElementById('joystick-knob');
 let joystickActive = false;
 
-function updateJoystick(touch) {
+function updateJoystick(clientX, clientY) {
   const rect = joystick.getBoundingClientRect();
   const cx = rect.left + rect.width / 2;
   const cy = rect.top + rect.height / 2;
-  let dx = touch.clientX - cx;
-  let dy = touch.clientY - cy;
-  const max = rect.width / 2 - 28;
+  let dx = clientX - cx;
+  let dy = clientY - cy;
+  const max = rect.width / 2 - 26;
   const dist = Math.hypot(dx, dy);
   if (dist > max) { dx = dx / dist * max; dy = dy / dist * max; }
   joystickKnob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
-  battle.joystickDir = Math.abs(dx) < 10 ? 0 : (dx > 0 ? 1 : -1);
+  const nx = dx / max;
+  const ny = dy / max;
+  const dead = 0.15;
+  battle.joyDX = Math.abs(nx) < dead ? 0 : nx;
+  battle.joyDY = Math.abs(ny) < dead ? 0 : ny;
 }
 
 joystick.addEventListener('touchstart', (e) => {
   e.preventDefault();
   joystickActive = true;
-  updateJoystick(e.touches[0]);
+  updateJoystick(e.touches[0].clientX, e.touches[0].clientY);
 }, { passive: false });
 joystick.addEventListener('touchmove', (e) => {
   e.preventDefault();
   if (!joystickActive) return;
-  updateJoystick(e.touches[0]);
+  updateJoystick(e.touches[0].clientX, e.touches[0].clientY);
 }, { passive: false });
-joystick.addEventListener('touchend', () => {
+joystick.addEventListener('touchend', (e) => {
+  e.preventDefault();
   joystickActive = false;
-  battle.joystickDir = 0;
+  battle.joyDX = 0;
+  battle.joyDY = 0;
   joystickKnob.style.transform = 'translate(-50%, -50%)';
-});
+}, { passive: false });
+
 joystick.addEventListener('mousedown', (e) => {
+  e.preventDefault();
   joystickActive = true;
-  updateJoystick(e);
+  updateJoystick(e.clientX, e.clientY);
 });
-window.addEventListener('mousemove', (e) => {
+document.addEventListener('mousemove', (e) => {
   if (!joystickActive) return;
-  updateJoystick(e);
+  e.preventDefault();
+  updateJoystick(e.clientX, e.clientY);
 });
-window.addEventListener('mouseup', () => {
+document.addEventListener('mouseup', () => {
   if (!joystickActive) return;
   joystickActive = false;
-  battle.joystickDir = 0;
+  battle.joyDX = 0;
+  battle.joyDY = 0;
   joystickKnob.style.transform = 'translate(-50%, -50%)';
 });
 
-// ---------- 好友：抽屉 ----------
+// ---------- 键盘 ----------
+document.addEventListener('keydown', (e) => {
+  if (e.repeat) return;
+  const k = e.key.toLowerCase();
+  if (k === 'w') battle.keyW = true;
+  else if (k === 's') battle.keyS = true;
+  else if (k === 'a') battle.keyA = true;
+  else if (k === 'd') battle.keyD = true;
+  else if (k === 'j') doAttack();
+  else if (k === 'k') doSkill();
+  else if (k === 'l') doHeal();
+  else if (k === 'u') doUltimate();
+});
+document.addEventListener('keyup', (e) => {
+  const k = e.key.toLowerCase();
+  if (k === 'w') battle.keyW = false;
+  else if (k === 's') battle.keyS = false;
+  else if (k === 'a') battle.keyA = false;
+  else if (k === 'd') battle.keyD = false;
+});
+
+// 屏幕旋转时重新计算角色位置
+window.addEventListener('resize', () => {
+  if (battle.active) updateFighterPositions();
+});
+window.addEventListener('orientationchange', () => {
+  setTimeout(() => {
+    if (battle.active) updateFighterPositions();
+  }, 300);
+});
+
+// ---------- 好友抽屉 ----------
 const friendsDrawer = document.getElementById('friends-drawer');
 const friendsOverlay = document.getElementById('friends-overlay');
 const settingsDrawer = document.getElementById('settings-drawer');
