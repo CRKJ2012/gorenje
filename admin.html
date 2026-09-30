@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>牦牛音乐 · 管理后台</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jsmediatags/3.9.5/jsmediatags.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, sans-serif; }
+    body { background: #0f0f13; color: #e8e8ed; padding: 24px; min-height: 100vh; }
+    .container { max-width: 960px; margin: 0 auto; }
+    h1 { font-size: 24px; margin-bottom: 24px; color: #fff; }
+    h1 span { color: #8b5cf6; }
+
+    .card { background: #1a1a24; border-radius: 16px; padding: 24px; margin-bottom: 20px; border: 1px solid #2a2a3a; }
+    .card h3 { margin-bottom: 16px; font-size: 16px; color: #a78bfa; }
+
+    .form-row { display: flex; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+    .form-row input { flex: 1; min-width: 150px; padding: 10px 12px; border-radius: 8px; border: 1px solid #2a2a3a; background: #0f0f13; color: #fff; font-size: 14px; }
+    .form-row label { display: block; font-size: 12px; color: #888; margin-bottom: 4px; }
+
+    .file-input { padding: 10px; border: 1px dashed #3a3a4a; border-radius: 8px; width: 100%; background: #0f0f13; color: #ccc; cursor: pointer; }
+    .file-input:hover { border-color: #8b5cf6; }
+
+    textarea.file-input { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; line-height: 1.5; resize: vertical; min-height: 120px; }
+    textarea.file-input:focus { outline: none; border-color: #8b5cf6; }
+
+    .preview { margin-top: 8px; }
+    .preview img { max-width: 100px; max-height: 100px; border-radius: 8px; }
+
+    .btn { padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer; font-size: 14px; font-weight: 500; }
+    .btn-primary { background: #8b5cf6; color: #fff; }
+    .btn-primary:hover { background: #7c3aed; }
+    .btn-primary:disabled { background: #444; cursor: not-allowed; }
+    .btn-danger { background: #ef4444; color: #fff; }
+    .btn-sm { padding: 6px 12px; font-size: 12px; }
+
+    .status { font-size: 13px; color: #888; margin-top: 8px; }
+
+    .song-item { display: flex; align-items: center; gap: 12px; padding: 12px; border-bottom: 1px solid #2a2a3a; }
+    .song-item:last-child { border-bottom: none; }
+    .song-cover { width: 48px; height: 48px; border-radius: 8px; object-fit: cover; background: #2a2a3a; }
+    .song-info { flex: 1; min-width: 0; }
+    .song-info .title { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .song-info .meta { font-size: 12px; color: #888; margin-top: 2px; }
+    .song-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 100; overflow-y: auto; padding: 20px; }
+    .modal { background: #1a1a24; padding: 24px; border-radius: 16px; width: 100%; max-width: 540px; max-height: 90vh; overflow-y: auto; }
+    .modal h3 { margin-bottom: 16px; }
+    .modal .btn-row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+
+    .hidden { display: none; }
+    .hint { font-size: 11px; color: #666; }
+
+    /* 滚动条美化 */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #0f0f13; }
+    ::-webkit-scrollbar-thumb { background: #2a2a3a; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #3a3a4a; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>牦牛音乐 · <span>管理后台</span></h1>
+
+  <!-- 上传表单 -->
+  <div class="card">
+    <h3>➕ 上传新歌曲</h3>
+    <div class="form-row">
+      <div style="flex: 1;">
+        <label>MP3 文件（选择后自动读取歌名/歌手/专辑）</label>
+        <input type="file" id="mp3File" class="file-input" accept="audio/mpeg,audio/mp3">
+      </div>
+    </div>
+    <div class="form-row">
+      <div style="flex: 1;">
+        <label>歌名</label>
+        <input type="text" id="songTitle" placeholder="自动读取或手动填写">
+      </div>
+      <div style="flex: 1;">
+        <label>歌手</label>
+        <input type="text" id="songArtist" placeholder="自动读取或手动填写">
+      </div>
+      <div style="flex: 1;">
+        <label>专辑</label>
+        <input type="text" id="songAlbum" placeholder="自动读取或手动填写">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div style="flex: 1;">
+        <label>封面图（可选，jpg/png）</label>
+        <input type="file" id="coverFile" class="file-input" accept="image/*">
+      </div>
+    </div>
+
+    <!-- 歌词：文件 + 粘贴框 -->
+    <div class="form-row">
+      <div style="flex: 1; display: flex; flex-direction: column; gap: 8px;">
+        <label>歌词（可选）</label>
+        <input type="file" id="lyricsFile" class="file-input" accept=".lrc,.txt,text/plain">
+        <textarea id="lyricsText" class="file-input" placeholder="或者直接在这里粘贴 LRC 歌词，例如：&#10;[00:12.34]第一句歌词&#10;[00:18.56]第二句歌词&#10;[00:25.00]第三句歌词"></textarea>
+        <div class="hint">文件或粘贴框二选一，粘贴框优先</div>
+      </div>
+    </div>
+
+    <div id="coverPreview" class="preview"></div>
+    <button class="btn btn-primary" id="uploadBtn" onclick="uploadSong()" disabled>上传</button>
+    <div id="uploadStatus" class="status"></div>
+  </div>
+
+  <!-- 歌曲列表 -->
+  <div class="card">
+    <h3>📋 歌曲列表</h3>
+    <div id="songList">加载中...</div>
+  </div>
+</div>
+
+<!-- 编辑弹窗 -->
+<div id="editModal" class="modal-overlay hidden">
+  <div class="modal">
+    <h3>编辑歌曲</h3>
+    <input type="hidden" id="editId">
+    <div class="form-row">
+      <div style="flex:1;">
+        <label>歌名</label>
+        <input type="text" id="editTitle">
+      </div>
+    </div>
+    <div class="form-row">
+      <div style="flex:1;">
+        <label>歌手</label>
+        <input type="text" id="editArtist">
+      </div>
+      <div style="flex:1;">
+        <label>专辑</label>
+        <input type="text" id="editAlbum">
+      </div>
+    </div>
+    <div class="form-row">
+      <div style="flex:1;">
+        <label>更换封面图（可选）</label>
+        <input type="file" id="editCover" class="file-input" accept="image/*">
+      </div>
+    </div>
+    <div id="editCoverPreview" class="preview"></div>
+
+    <!-- 编辑歌词：文件 + 粘贴框 -->
+    <div class="form-row">
+      <div style="flex:1; display:flex; flex-direction:column; gap:8px;">
+        <label>歌词（可选）</label>
+        <input type="file" id="editLyrics" class="file-input" accept=".lrc,.txt,text/plain">
+        <textarea id="editLyricsText" class="file-input" placeholder="或者直接粘贴 LRC 歌词"></textarea>
+        <div class="hint">文件或粘贴框二选一，粘贴框优先（会覆盖原歌词）</div>
+      </div>
+    </div>
+    <div id="editLyricsStatus" style="font-size:12px;color:#888;margin-bottom:8px;"></div>
+
+    <div class="btn-row">
+      <button class="btn" style="background:#2a2a3a;color:#ccc;" onclick="closeEdit()">取消</button>
+      <button class="btn btn-primary" onclick="saveEdit()">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ============================================================
+  // 牦牛音乐 · 管理后台（无需登录）
+  // ============================================================
+
+  // 初始化 Supabase
+  const SUPABASE_URL = 'https://zarxvhlvbgrtriafqfjr.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inphcnh2aGx2YmdydHJpYWZxZmpyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAzOTE5NDYsImV4cCI6MjEwNTk2Nzk0Nn0.VieGkLDW1JH4ezimYxPo1rVjEJp9WpIRiV2idfzLql4';
+  const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  // ---------- 读取 MP3 标签 ----------
+  document.getElementById('mp3File').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    jsmediatags.read(file, {
+      onSuccess: function(tag) {
+        const tags = tag.tags;
+        if (tags.title) document.getElementById('songTitle').value = tags.title;
+        if (tags.artist) document.getElementById('songArtist').value = tags.artist;
+        if (tags.album) document.getElementById('songAlbum').value = tags.album;
+
+        document.getElementById('uploadStatus').textContent =
+          '已读取标签：' + (tags.title || '未知歌名') + ' - ' + (tags.artist || '未知歌手');
+
+        checkUploadReady();
+      },
+      onError: function(error) {
+        console.log('读取标签失败：', error);
+        document.getElementById('uploadStatus').textContent = '无法读取 MP3 标签，请手动填写歌名';
+        checkUploadReady();
+      }
+    });
+  });
+
+  // ---------- 封面预览 ----------
+  document.getElementById('coverFile').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    const preview = document.getElementById('coverPreview');
+    if (!file) { preview.innerHTML = ''; return; }
+    preview.innerHTML = '<img src="' + URL.createObjectURL(file) + '">';
+  });
+
+  function checkUploadReady() {
+    const hasFile = document.getElementById('mp3File').files.length > 0;
+    const hasTitle = document.getElementById('songTitle').value.trim() !== '';
+    document.getElementById('uploadBtn').disabled = !(hasFile && hasTitle);
+  }
+
+  document.getElementById('songTitle').addEventListener('input', checkUploadReady);
+
+  // ---------- 上传歌曲 ----------
+  async function uploadSong() {
+    const mp3File = document.getElementById('mp3File').files[0];
+    const coverFile = document.getElementById('coverFile').files[0];
+    const lyricsFile = document.getElementById('lyricsFile').files[0];
+    const lyricsText = (document.getElementById('lyricsText').value || '').trim();
+    const title = document.getElementById('songTitle').value.trim();
+    const artist = document.getElementById('songArtist').value.trim();
+    const album = document.getElementById('songAlbum').value.trim();
+    const status = document.getElementById('uploadStatus');
+    const btn = document.getElementById('uploadBtn');
+
+    if (!mp3File || !title) {
+      status.textContent = '请选择 MP3 文件并填写歌名';
+      return;
+    }
+
+    btn.disabled = true;
+    status.textContent = '上传中...';
+
+    try {
+      const timestamp = Date.now();
+
+      // 1. 上传 MP3
+      const audioPath = timestamp + '_' + mp3File.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const { error: audioError } = await supabaseClient.storage
+        .from('audio').upload(audioPath, mp3File);
+      if (audioError) throw new Error('MP3 上传失败：' + audioError.message);
+
+      const { data: audioData } = supabaseClient.storage.from('audio').getPublicUrl(audioPath);
+      const audioUrl = audioData.publicUrl;
+
+      // 2. 上传封面
+      let coverUrl = null;
+      if (coverFile) {
+        const coverPath = timestamp + '_' + coverFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const { error: coverError } = await supabaseClient.storage
+          .from('covers').upload(coverPath, coverFile);
+        if (coverError) throw new Error('封面上传失败：' + coverError.message);
+        const { data: coverData } = supabaseClient.storage.from('covers').getPublicUrl(coverPath);
+        coverUrl = coverData.publicUrl;
+      }
+
+      // 3. 上传歌词（粘贴框优先）
+      let lyricsUrl = null;
+      if (lyricsText) {
+        // 粘贴框有内容 → 转成 Blob 上传
+        const lyricsPath = timestamp + '_lyrics.lrc';
+        const lyricsBlob = new Blob([lyricsText], { type: 'text/plain;charset=utf-8' });
+        const { error: lyricsError } = await supabaseClient.storage
+          .from('lyrics').upload(lyricsPath, lyricsBlob);
+        if (lyricsError) throw new Error('歌词上传失败：' + lyricsError.message);
+        const { data: lyricsData } = supabaseClient.storage.from('lyrics').getPublicUrl(lyricsPath);
+        lyricsUrl = lyricsData.publicUrl;
+      } else if (lyricsFile) {
+        const lyricsPath = timestamp + '_' + lyricsFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const { error: lyricsError } = await supabaseClient.storage
+          .from('lyrics').upload(lyricsPath, lyricsFile);
+        if (lyricsError) throw new Error('歌词上传失败：' + lyricsError.message);
+        const { data: lyricsData } = supabaseClient.storage.from('lyrics').getPublicUrl(lyricsPath);
+        lyricsUrl = lyricsData.publicUrl;
+      }
+
+      // 4. 写入数据库
+      const { error: dbError } = await supabaseClient.from('songs').insert({
+        title, artist: artist || null, album: album || null,
+        audio_url: audioUrl, cover_url: coverUrl, lyrics: lyricsUrl,
+      });
+      if (dbError) throw new Error('数据库写入失败：' + dbError.message);
+
+      status.textContent = '✅ 上传成功！';
+
+      // 清空表单
+      document.getElementById('mp3File').value = '';
+      document.getElementById('coverFile').value = '';
+      document.getElementById('lyricsFile').value = '';
+      document.getElementById('lyricsText').value = '';
+      document.getElementById('songTitle').value = '';
+      document.getElementById('songArtist').value = '';
+      document.getElementById('songAlbum').value = '';
+      document.getElementById('coverPreview').innerHTML = '';
+
+      loadSongs();
+    } catch (err) {
+      console.error(err);
+      status.textContent = '❌ ' + err.message;
+    } finally {
+      btn.disabled = false;
+      checkUploadReady();
+    }
+  }
+
+  // ---------- 加载歌曲列表 ----------
+  async function loadSongs() {
+    const listEl = document.getElementById('songList');
+    listEl.textContent = '加载中...';
+
+    const { data: songs, error } = await supabaseClient
+      .from('songs').select('*').order('created_at', { ascending: false });
+
+    if (error) { listEl.textContent = '加载失败：' + error.message; return; }
+    if (!songs || songs.length === 0) { listEl.textContent = '还没有歌曲，上传第一首吧'; return; }
+
+    listEl.innerHTML = songs.map(function(song) {
+      return `
+        <div class="song-item">
+          ${song.cover_url
+            ? '<img class="song-cover" src="' + song.cover_url + '">'
+            : '<div class="song-cover" style="display:flex;align-items:center;justify-content:center;color:#555;">🎵</div>'}
+          <div class="song-info">
+            <div class="title">${escapeHtml(song.title)}</div>
+            <div class="meta">${escapeHtml(song.artist || '未知歌手')} · ${escapeHtml(song.album || '无专辑')}${song.lyrics ? ' · 有歌词' : ''}</div>
+          </div>
+          <div class="song-actions">
+            <button class="btn btn-primary btn-sm" onclick="openEdit(${song.id})">编辑</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteSong(${song.id})">删除</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text == null ? '' : text;
+    return div.innerHTML;
+  }
+
+  // ---------- 删除 ----------
+  async function deleteSong(id) {
+    if (!confirm('确定删除这首歌曲吗？')) return;
+    const { error } = await supabaseClient.from('songs').delete().eq('id', id);
+    if (error) { alert('删除失败：' + error.message); return; }
+    loadSongs();
+  }
+
+  // ---------- 编辑 ----------
+  let editingSong = null;
+
+  async function openEdit(id) {
+    const { data: song, error } = await supabaseClient
+      .from('songs').select('*').eq('id', id).single();
+    if (error || !song) { alert('获取歌曲信息失败'); return; }
+
+    editingSong = song;
+    document.getElementById('editId').value = song.id;
+    document.getElementById('editTitle').value = song.title;
+    document.getElementById('editArtist').value = song.artist || '';
+    document.getElementById('editAlbum').value = song.album || '';
+    document.getElementById('editCover').value = '';
+    document.getElementById('editLyrics').value = '';
+    document.getElementById('editLyricsText').value = '';
+    document.getElementById('editCoverPreview').innerHTML = song.cover_url
+      ? '<img src="' + song.cover_url + '">' : '';
+
+    // 加载原歌词到粘贴框
+    if (song.lyrics) {
+      document.getElementById('editLyricsStatus').textContent = '当前已有歌词，正在加载...';
+      try {
+        const res = await fetch(song.lyrics);
+        const text = await res.text();
+        document.getElementById('editLyricsText').value = text;
+        document.getElementById('editLyricsStatus').textContent = '当前已有歌词，修改后保存会覆盖';
+      } catch (e) {
+        document.getElementById('editLyricsStatus').textContent = '当前已有歌词（加载失败，可重新粘贴或上传）';
+      }
+    } else {
+      document.getElementById('editLyricsStatus').textContent = '当前无歌词';
+    }
+
+    document.getElementById('editModal').classList.remove('hidden');
+  }
+
+  function closeEdit() {
+    document.getElementById('editModal').classList.add('hidden');
+    editingSong = null;
+  }
+
+  document.getElementById('editCover').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    const preview = document.getElementById('editCoverPreview');
+    if (!file) {
+      preview.innerHTML = editingSong && editingSong.cover_url
+        ? '<img src="' + editingSong.cover_url + '">' : '';
+      return;
+    }
+    preview.innerHTML = '<img src="' + URL.createObjectURL(file) + '">';
+  });
+
+  async function saveEdit() {
+    const id = document.getElementById('editId').value;
+    const title = document.getElementById('editTitle').value.trim();
+    const artist = document.getElementById('editArtist').value.trim();
+    const album = document.getElementById('editAlbum').value.trim();
+    const coverFile = document.getElementById('editCover').files[0];
+    const lyricsFile = document.getElementById('editLyrics').files[0];
+    const editLyricsText = (document.getElementById('editLyricsText').value || '').trim();
+
+    if (!title) { alert('歌名不能为空'); return; }
+
+    try {
+      let coverUrl = editingSong.cover_url;
+      let lyricsUrl = editingSong.lyrics;
+      const timestamp = Date.now();
+
+      // 上传新封面
+      if (coverFile) {
+        const coverPath = timestamp + '_' + coverFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const { error: uploadError } = await supabaseClient.storage
+          .from('covers').upload(coverPath, coverFile);
+        if (uploadError) throw new Error('封面上传失败：' + uploadError.message);
+        const { data: coverData } = supabaseClient.storage.from('covers').getPublicUrl(coverPath);
+        coverUrl = coverData.publicUrl;
+      }
+
+      // 歌词：粘贴框优先
+      if (editLyricsText) {
+        const lyricsPath = timestamp + '_lyrics.lrc';
+        const lyricsBlob = new Blob([editLyricsText], { type: 'text/plain;charset=utf-8' });
+        const { error: lyricsError } = await supabaseClient.storage
+          .from('lyrics').upload(lyricsPath, lyricsBlob);
+        if (lyricsError) throw new Error('歌词上传失败：' + lyricsError.message);
+        const { data: lyricsData } = supabaseClient.storage.from('lyrics').getPublicUrl(lyricsPath);
+        lyricsUrl = lyricsData.publicUrl;
+      } else if (lyricsFile) {
+        const lyricsPath = timestamp + '_' + lyricsFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const { error: lyricsError } = await supabaseClient.storage
+          .from('lyrics').upload(lyricsPath, lyricsFile);
+        if (lyricsError) throw new Error('歌词上传失败：' + lyricsError.message);
+        const { data: lyricsData } = supabaseClient.storage.from('lyrics').getPublicUrl(lyricsPath);
+        lyricsUrl = lyricsData.publicUrl;
+      }
+
+      const { error: dbError } = await supabaseClient.from('songs').update({
+        title, artist: artist || null, album: album || null,
+        cover_url: coverUrl, lyrics: lyricsUrl,
+      }).eq('id', id);
+      if (dbError) throw new Error('更新失败：' + dbError.message);
+
+      closeEdit();
+      loadSongs();
+    } catch (err) {
+      alert(err.message);
+    }
+  }
+
+  // ---------- 初始化 ----------
+  loadSongs();
+</script>
+
+</body>
+</html>
