@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>牦牛音乐 · 后台</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsmediatags/3.9.5/jsmediatags.min.js"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; font-family:system-ui,-apple-system,sans-serif; }
+body { background:#0f0f13; color:#e8e8ed; padding:24px; min-height:100vh; }
+.container { max-width:1100px; margin:0 auto; }
+h1 { font-size:22px; margin-bottom:24px; }
+h1 span { color:#8b5cf6; }
+
+.tabs { display:flex; background:#1a1a24; border-radius:12px; padding:4px; margin-bottom:20px; max-width:500px; }
+.tab { flex:1; padding:10px; border-radius:8px; border:none; background:none; color:#888; cursor:pointer; font-size:14px; font-weight:500; transition:all 0.15s; }
+.tab.active { background:#8b5cf6; color:#fff; }
+
+.card { background:#1a1a24; border-radius:14px; padding:22px; margin-bottom:18px; border:1px solid #2a2a3a; }
+.card h3 { margin-bottom:16px; font-size:15px; color:#a78bfa; }
+
+.form-row { display:flex; gap:12px; margin-bottom:12px; flex-wrap:wrap; }
+.form-row > div { flex:1; min-width:150px; }
+.form-row label { display:block; font-size:12px; color:#888; margin-bottom:6px; }
+.form-row input[type="text"] { width:100%; padding:10px 12px; border-radius:8px; border:1px solid #2a2a3a; background:#0f0f13; color:#fff; font-size:14px; }
+.form-row input[type="text"]:focus { outline:none; border-color:#8b5cf6; }
+
+.file-input { padding:10px; border:1px dashed #3a3a4a; border-radius:8px; width:100%; background:#0f0f13; color:#ccc; cursor:pointer; }
+.file-input:hover { border-color:#8b5cf6; }
+textarea.file-input { font-family:ui-monospace,Menlo,monospace; font-size:12px; line-height:1.5; resize:vertical; min-height:120px; }
+textarea.file-input:focus { outline:none; border-color:#8b5cf6; }
+
+.preview img { max-width:100px; max-height:100px; border-radius:8px; margin-top:8px; }
+
+.btn { padding:10px 20px; border-radius:8px; border:none; cursor:pointer; font-size:14px; font-weight:500; transition:all 0.15s; }
+.btn-primary { background:#8b5cf6; color:#fff; }
+.btn-primary:hover { background:#7c3aed; }
+.btn-primary:disabled { background:#444; cursor:not-allowed; }
+.btn-danger { background:#ef4444; color:#fff; }
+.btn-ghost { background:#2a2a3a; color:#ccc; }
+.btn-ghost:hover { background:#3a3a4a; }
+.btn-sm { padding:6px 12px; font-size:12px; }
+
+.status { font-size:13px; color:#888; margin-top:8px; }
+
+.song-item { display:flex; align-items:center; gap:12px; padding:12px; border-bottom:1px solid #2a2a3a; }
+.song-item:last-child { border-bottom:none; }
+.song-cover { width:48px; height:48px; border-radius:8px; object-fit:cover; background:#2a2a3a; flex-shrink:0; display:flex; align-items:center; justify-content:center; color:#555; }
+.song-info { flex:1; min-width:0; }
+.song-title { font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.song-meta { font-size:12px; color:#888; margin-top:2px; }
+.song-actions { display:flex; gap:6px; flex-shrink:0; }
+
+.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.7); display:flex; align-items:center; justify-content:center; z-index:100; padding:20px; }
+.modal-overlay.hidden { display:none; }
+.modal { background:#1a1a24; padding:24px; border-radius:14px; width:100%; max-width:540px; max-height:90vh; overflow-y:auto; }
+.modal h3 { margin-bottom:16px; }
+.modal .btn-row { display:flex; gap:8px; justify-content:flex-end; margin-top:16px; }
+
+.hidden { display:none !important; }
+
+.request-item { padding:14px; border-radius:10px; background:#0f0f13; border:1px solid #2a2a3a; margin-bottom:8px; }
+.request-item.done { opacity:0.5; }
+.request-header { display:flex; justify-content:space-between; align-items:start; gap:12px; margin-bottom:8px; }
+.request-title { font-weight:600; font-size:15px; }
+.request-meta { font-size:12px; color:#888; margin-top:2px; }
+.request-date { font-size:11px; color:#666; text-align:right; margin-bottom:6px; }
+.request-badge { font-size:11px; padding:3px 8px; border-radius:10px; display:inline-block; }
+.request-badge.pending { background:rgba(139,92,246,0.15); color:#a78bfa; }
+.request-badge.done { background:rgba(34,197,94,0.15); color:#4ade80; }
+.request-reason { font-size:13px; color:#aaa; padding:8px; background:#1a1a24; border-radius:6px; margin-bottom:10px; }
+
+::-webkit-scrollbar { width:8px; }
+::-webkit-scrollbar-thumb { background:#2a2a3a; border-radius:4px; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>牦牛音乐 · <span>管理后台</span></h1>
+
+  <div class="tabs">
+    <button class="tab active" id="tabManual" onclick="switchTab('manual')">手动上传</button>
+    <button class="tab" id="tabRequests" onclick="switchTab('requests')">📬 用户投稿</button>
+  </div>
+
+  <div id="panelManual">
+    <div class="card">
+      <h3>➕ 上传新歌曲</h3>
+      <div class="form-row">
+        <div><label>MP3 文件（自动读歌名/歌手/专辑）</label><input type="file" class="file-input" id="mp3File" accept="audio/mpeg,audio/mp3"></div>
+      </div>
+      <div class="form-row">
+        <div><label>歌名</label><input type="text" id="songTitle"></div>
+        <div><label>歌手</label><input type="text" id="songArtist"></div>
+        <div><label>专辑</label><input type="text" id="songAlbum"></div>
+      </div>
+      <div class="form-row">
+        <div><label>封面图（可选）</label><input type="file" class="file-input" id="coverFile" accept="image/*"></div>
+      </div>
+      <div class="preview" id="coverPreview"></div>
+      <div class="form-row">
+        <div>
+          <label>歌词（可选，粘贴框优先）</label>
+          <input type="file" class="file-input" id="lyricsFile" accept=".lrc,.txt">
+          <textarea class="file-input" id="lyricsText" placeholder="或直接粘贴 LRC 歌词，例如：&#10;[00:12.34]第一句歌词&#10;[00:18.56]第二句歌词" style="margin-top:8px;"></textarea>
+        </div>
+      </div>
+      <button class="btn btn-primary" id="uploadBtn" onclick="uploadSong()" disabled>上传</button>
+      <div class="status" id="uploadStatus"></div>
+    </div>
+  </div>
+
+  <div id="panelRequests" class="hidden">
+    <div class="card">
+      <h3>📬 用户投稿</h3>
+      <div style="display:flex;gap:8px;margin-bottom:16px;">
+        <button class="btn btn-ghost btn-sm" onclick="filterRequests('all')" id="filterAll">全部</button>
+        <button class="btn btn-ghost btn-sm" onclick="filterRequests('pending')" id="filterPending">待处理</button>
+        <button class="btn btn-ghost btn-sm" onclick="filterRequests('done')" id="filterDone">已处理</button>
+      </div>
+      <div id="requestList">加载中...</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>📋 我的歌曲列表</h3>
+    <div id="songList">加载中...</div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="editModal">
+  <div class="modal">
+    <h3>编辑歌曲</h3>
+    <input type="hidden" id="editId">
+    <div class="form-row"><div><label>歌名</label><input type="text" id="editTitle"></div></div>
+    <div class="form-row">
+      <div><label>歌手</label><input type="text" id="editArtist"></div>
+      <div><label>专辑</label><input type="text" id="editAlbum"></div>
+    </div>
+    <div class="form-row"><div><label>更换封面图（可选）</label><input type="file" class="file-input" id="editCover" accept="image/*"></div></div>
+    <div class="preview" id="editCoverPreview"></div>
+    <div class="form-row"><div>
+      <label>歌词（可选，粘贴框优先）</label>
+      <input type="file" class="file-input" id="editLyrics" accept=".lrc,.txt">
+      <textarea class="file-input" id="editLyricsText" placeholder="或直接粘贴 LRC 歌词" style="margin-top:8px;"></textarea>
+    </div></div>
+    <div class="status" id="editLyricsStatus"></div>
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="closeEdit()">取消</button>
+      <button class="btn btn-primary" onclick="saveEdit()">保存</button>
+    </div>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script>
+// ============================================================
+// 牦牛音乐 · 后台
+// ============================================================
+
+let editingSong = null;
+let allRequests = [];
+let requestFilter = 'all';
+
+function esc(t) { const d = document.createElement('div'); d.textContent = t == null ? '' : t; return d.innerHTML; }
+
+function switchTab(which) {
+  document.getElementById('tabManual').classList.toggle('active', which === 'manual');
+  document.getElementById('tabRequests').classList.toggle('active', which === 'requests');
+  document.getElementById('panelManual').classList.toggle('hidden', which !== 'manual');
+  document.getElementById('panelRequests').classList.toggle('hidden', which !== 'requests');
+  if (which === 'requests') loadRequests();
+}
+
+// ========== 手动上传 ==========
+document.getElementById('mp3File').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  jsmediatags.read(file, {
+    onSuccess: function(tag) {
+      const t = tag.tags;
+      if (t.title) document.getElementById('songTitle').value = t.title;
+      if (t.artist) document.getElementById('songArtist').value = t.artist;
+      if (t.album) document.getElementById('songAlbum').value = t.album;
+      document.getElementById('uploadStatus').textContent = '已读取：' + (t.title || '') + ' - ' + (t.artist || '');
+      checkUploadReady();
+    },
+    onError: function() {
+      document.getElementById('uploadStatus').textContent = '无法读取标签，请手动填写';
+      checkUploadReady();
+    }
+  });
+});
+
+document.getElementById('coverFile').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  document.getElementById('coverPreview').innerHTML = file ? '<img src="' + URL.createObjectURL(file) + '">' : '';
+});
+
+document.getElementById('songTitle').addEventListener('input', checkUploadReady);
+
+function checkUploadReady() {
+  const hasFile = document.getElementById('mp3File').files.length > 0;
+  const hasTitle = document.getElementById('songTitle').value.trim() !== '';
+  document.getElementById('uploadBtn').disabled = !(hasFile && hasTitle);
+}
+
+async function uploadSong() {
+  const mp3File = document.getElementById('mp3File').files[0];
+  const coverFile = document.getElementById('coverFile').files[0];
+  const lyricsFile = document.getElementById('lyricsFile').files[0];
+  const lyricsText = (document.getElementById('lyricsText').value || '').trim();
+  const title = document.getElementById('songTitle').value.trim();
+  const artist = document.getElementById('songArtist').value.trim();
+  const album = document.getElementById('songAlbum').value.trim();
+  const status = document.getElementById('uploadStatus');
+  const btn = document.getElementById('uploadBtn');
+
+  if (!mp3File || !title) { status.textContent = '请选择 MP3 并填歌名'; return; }
+  btn.disabled = true;
+  status.textContent = '上传中...';
+
+  try {
+    const ts = Date.now();
+    const audioPath = ts + '_' + mp3File.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const { error: e1 } = await supabaseClient.storage.from('audio').upload(audioPath, mp3File);
+    if (e1) throw new Error('MP3 上传失败：' + e1.message);
+    const audioUrl = supabaseClient.storage.from('audio').getPublicUrl(audioPath).data.publicUrl;
+
+    let coverUrl = null;
+    if (coverFile) {
+      const p = ts + '_' + coverFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const { error } = await supabaseClient.storage.from('covers').upload(p, coverFile);
+      if (error) throw new Error('封面上传失败：' + error.message);
+      coverUrl = supabaseClient.storage.from('covers').getPublicUrl(p).data.publicUrl;
+    }
+
+    let lyricsUrl = null;
+    if (lyricsText) {
+      const p = ts + '_lyrics.lrc';
+      const blob = new Blob([lyricsText], { type: 'text/plain;charset=utf-8' });
+      const { error } = await supabaseClient.storage.from('lyrics').upload(p, blob);
+      if (error) throw new Error('歌词上传失败：' + error.message);
+      lyricsUrl = supabaseClient.storage.from('lyrics').getPublicUrl(p).data.publicUrl;
+    } else if (lyricsFile) {
+      const p = ts + '_' + lyricsFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const { error } = await supabaseClient.storage.from('lyrics').upload(p, lyricsFile);
+      if (error) throw new Error('歌词上传失败：' + error.message);
+      lyricsUrl = supabaseClient.storage.from('lyrics').getPublicUrl(p).data.publicUrl;
+    }
+
+    const { error: e2 } = await supabaseClient.from('songs').insert({
+      title, artist: artist || null, album: album || null,
+      audio_url: audioUrl, cover_url: coverUrl, lyrics: lyricsUrl,
+    });
+    if (e2) throw new Error('写库失败：' + e2.message);
+
+    status.textContent = '✅ 上传成功！';
+    ['mp3File','coverFile','lyricsFile','songTitle','songArtist','songAlbum','lyricsText'].forEach(function(id) {
+      const el = document.getElementById(id); if (el) el.value = '';
+    });
+    document.getElementById('coverPreview').innerHTML = '';
+    loadSongs();
+  } catch (err) {
+    status.textContent = '❌ ' + err.message;
+  } finally {
+    btn.disabled = false;
+    checkUploadReady();
+  }
+}
+
+// ========== 投稿管理 ==========
+async function loadRequests() {
+  const el = document.getElementById('requestList');
+  if (!el) return;
+  el.textContent = '加载中...';
+  const { data, error } = await supabaseClient.from('song_requests').select('*').order('created_at', { ascending: false });
+  if (error) { el.textContent = '加载失败：' + error.message; return; }
+  allRequests = data || [];
+  renderRequests();
+}
+
+function filterRequests(f) {
+  requestFilter = f;
+  ['all','pending','done'].forEach(function(x) {
+    const el = document.getElementById('filter' + x.charAt(0).toUpperCase() + x.slice(1));
+    if (el) {
+      el.style.background = x === f ? '#8b5cf6' : '';
+      el.style.color = x === f ? '#fff' : '';
+    }
+  });
+  renderRequests();
+}
+
+function renderRequests() {
+  const el = document.getElementById('requestList');
+  let list = allRequests;
+  if (requestFilter === 'pending') list = allRequests.filter(function(r) { return r.status !== 'done'; });
+  if (requestFilter === 'done') list = allRequests.filter(function(r) { return r.status === 'done'; });
+
+  if (list.length === 0) {
+    el.innerHTML = '<div class="status">还没有投稿</div>';
+    return;
+  }
+
+  el.innerHTML = list.map(function(r) {
+    const done = r.status === 'done';
+    const date = new Date(r.created_at);
+    const dateStr = date.getFullYear() + '-' + (date.getMonth()+1) + '-' + date.getDate() + ' ' + date.getHours() + ':' + ('0'+date.getMinutes()).slice(-2);
+    return `<div class="request-item${done ? ' done' : ''}">
+      <div class="request-header">
+        <div style="flex:1;min-width:0;">
+          <div class="request-title">${esc(r.song_title)}</div>
+          <div class="request-meta">${esc(r.artist || '未填歌手')} · 投稿人：${esc(r.nickname || '匿名')}</div>
+        </div>
+        <div>
+          <div class="request-date">${dateStr}</div>
+          <span class="request-badge ${done ? 'done' : 'pending'}">${done ? '已处理' : '待处理'}</span>
+        </div>
+      </div>
+      ${r.reason ? '<div class="request-reason">💬 ' + esc(r.reason) + '</div>' : ''}
+      <div style="display:flex;gap:6px;">
+        ${!done
+          ? '<button class="btn btn-primary btn-sm" onclick="markRequest(' + r.id + ', \'done\')">标记已处理</button>'
+          : '<button class="btn btn-ghost btn-sm" onclick="markRequest(' + r.id + ', \'pending\')">恢复待处理</button>'}
+        <button class="btn btn-danger btn-sm" onclick="deleteRequest(' + r.id + ')">删除</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function markRequest(id, status) {
+  await supabaseClient.from('song_requests').update({ status: status }).eq('id', id);
+  loadRequests();
+}
+
+async function deleteRequest(id) {
+  if (!confirm('删除这条投稿？')) return;
+  await supabaseClient.from('song_requests').delete().eq('id', id);
+  loadRequests();
+}
+
+// ========== 歌曲列表 ==========
+async function loadSongs() {
+  const el = document.getElementById('songList');
+  el.textContent = '加载中...';
+  const { data: songs, error } = await supabaseClient.from('songs').select('*').order('created_at', { ascending: false });
+  if (error) { el.textContent = '加载失败：' + error.message; return; }
+  if (!songs || songs.length === 0) { el.textContent = '还没有歌曲'; return; }
+
+  el.innerHTML = songs.map(function(s) {
+    return `<div class="song-item">
+      ${s.cover_url ? '<img class="song-cover" src="' + s.cover_url + '">' : '<div class="song-cover">🎵</div>'}
+      <div class="song-info">
+        <div class="song-title">${esc(s.title)}</div>
+        <div class="song-meta">${esc(s.artist || '未知歌手')} · ${esc(s.album || '无专辑')}${s.lyrics ? ' · 有歌词' : ''}</div>
+      </div>
+      <div class="song-actions">
+        <button class="btn btn-primary btn-sm" onclick="openEdit(${s.id})">编辑</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteSong(${s.id})">删除</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function deleteSong(id) {
+  if (!confirm('确定删除？')) return;
+  await supabaseClient.from('songs').delete().eq('id', id);
+  loadSongs();
+}
+
+async function openEdit(id) {
+  const { data: song } = await supabaseClient.from('songs').select('*').eq('id', id).single();
+  if (!song) return;
+  editingSong = song;
+  document.getElementById('editId').value = song.id;
+  document.getElementById('editTitle').value = song.title;
+  document.getElementById('editArtist').value = song.artist || '';
+  document.getElementById('editAlbum').value = song.album || '';
+  document.getElementById('editCover').value = '';
+  document.getElementById('editLyrics').value = '';
+  document.getElementById('editLyricsText').value = '';
+  document.getElementById('editCoverPreview').innerHTML = song.cover_url ? '<img src="' + song.cover_url + '">' : '';
+
+  if (song.lyrics) {
+    document.getElementById('editLyricsStatus').textContent = '当前已有歌词，正在加载...';
+    try {
+      const txt = await (await fetch(song.lyrics)).text();
+      document.getElementById('editLyricsText').value = txt;
+      document.getElementById('editLyricsStatus').textContent = '修改后保存会覆盖';
+    } catch (e) {
+      document.getElementById('editLyricsStatus').textContent = '歌词加载失败';
+    }
+  } else {
+    document.getElementById('editLyricsStatus').textContent = '当前无歌词';
+  }
+  document.getElementById('editModal').classList.remove('hidden');
+}
+
+function closeEdit() {
+  document.getElementById('editModal').classList.add('hidden');
+  editingSong = null;
+}
+
+document.getElementById('editCover').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  const preview = document.getElementById('editCoverPreview');
+  if (!file) { preview.innerHTML = editingSong && editingSong.cover_url ? '<img src="' + editingSong.cover_url + '">' : ''; return; }
+  preview.innerHTML = '<img src="' + URL.createObjectURL(file) + '">';
+});
+
+async function saveEdit() {
+  const id = document.getElementById('editId').value;
+  const title = document.getElementById('editTitle').value.trim();
+  const artist = document.getElementById('editArtist').value.trim();
+  const album = document.getElementById('editAlbum').value.trim();
+  const coverFile = document.getElementById('editCover').files[0];
+  const lyricsFile = document.getElementById('editLyrics').files[0];
+  const editLyricsText = (document.getElementById('editLyricsText').value || '').trim();
+  if (!title) { alert('歌名不能为空'); return; }
+
+  try {
+    let coverUrl = editingSong.cover_url;
+    let lyricsUrl = editingSong.lyrics;
+    const ts = Date.now();
+
+    if (coverFile) {
+      const p = ts + '_' + coverFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const { error } = await supabaseClient.storage.from('covers').upload(p, coverFile);
+      if (error) throw new Error('封面上传失败：' + error.message);
+      coverUrl = supabaseClient.storage.from('covers').getPublicUrl(p).data.publicUrl;
+    }
+
+    if (editLyricsText) {
+      const p = ts + '_lyrics.lrc';
+      const blob = new Blob([editLyricsText], { type: 'text/plain;charset=utf-8' });
+      const { error } = await supabaseClient.storage.from('lyrics').upload(p, blob);
+      if (error) throw new Error('歌词上传失败：' + error.message);
+      lyricsUrl = supabaseClient.storage.from('lyrics').getPublicUrl(p).data.publicUrl;
+    } else if (lyricsFile) {
+      const p = ts + '_' + lyricsFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const { error } = await supabaseClient.storage.from('lyrics').upload(p, lyricsFile);
+      if (error) throw new Error('歌词上传失败：' + error.message);
+      lyricsUrl = supabaseClient.storage.from('lyrics').getPublicUrl(p).data.publicUrl;
+    }
+
+    const { error } = await supabaseClient.from('songs').update({
+      title, artist: artist || null, album: album || null,
+      cover_url: coverUrl, lyrics: lyricsUrl,
+    }).eq('id', id);
+    if (error) throw new Error('更新失败：' + error.message);
+
+    closeEdit();
+    loadSongs();
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+loadSongs();
+</script>
+</body>
+</html>
