@@ -13,7 +13,7 @@ body { background:#0f0f13; color:#e8e8ed; padding:24px; min-height:100vh; }
 h1 { font-size:22px; margin-bottom:24px; }
 h1 span { color:#8b5cf6; }
 
-.tabs { display:flex; background:#1a1a24; border-radius:12px; padding:4px; margin-bottom:20px; max-width:500px; }
+.tabs { display:flex; background:#1a1a24; border-radius:12px; padding:4px; margin-bottom:20px; max-width:700px; }
 .tab { flex:1; padding:10px; border-radius:8px; border:none; background:none; color:#888; cursor:pointer; font-size:14px; font-weight:500; transition:all 0.15s; }
 .tab.active { background:#8b5cf6; color:#fff; }
 
@@ -23,8 +23,8 @@ h1 span { color:#8b5cf6; }
 .form-row { display:flex; gap:12px; margin-bottom:12px; flex-wrap:wrap; }
 .form-row > div { flex:1; min-width:150px; }
 .form-row label { display:block; font-size:12px; color:#888; margin-bottom:6px; }
-.form-row input[type="text"] { width:100%; padding:10px 12px; border-radius:8px; border:1px solid #2a2a3a; background:#0f0f13; color:#fff; font-size:14px; }
-.form-row input[type="text"]:focus { outline:none; border-color:#8b5cf6; }
+.form-row input[type="text"], .form-row select { width:100%; padding:10px 12px; border-radius:8px; border:1px solid #2a2a3a; background:#0f0f13; color:#fff; font-size:14px; }
+.form-row input[type="text"]:focus, .form-row select:focus { outline:none; border-color:#8b5cf6; }
 
 .file-input { padding:10px; border:1px dashed #3a3a4a; border-radius:8px; width:100%; background:#0f0f13; color:#ccc; cursor:pointer; }
 .file-input:hover { border-color:#8b5cf6; }
@@ -44,13 +44,20 @@ textarea.file-input:focus { outline:none; border-color:#8b5cf6; }
 
 .status { font-size:13px; color:#888; margin-top:8px; }
 
-.song-item { display:flex; align-items:center; gap:12px; padding:12px; border-bottom:1px solid #2a2a3a; }
-.song-item:last-child { border-bottom:none; }
-.song-cover { width:48px; height:48px; border-radius:8px; object-fit:cover; background:#2a2a3a; flex-shrink:0; display:flex; align-items:center; justify-content:center; color:#555; }
-.song-info { flex:1; min-width:0; }
-.song-title { font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.song-meta { font-size:12px; color:#888; margin-top:2px; }
-.song-actions { display:flex; gap:6px; flex-shrink:0; }
+.chip-list { display:flex; flex-wrap:wrap; gap:6px; min-height:38px; padding:8px; background:#0f0f13; border:1px solid #2a2a3a; border-radius:8px; }
+.chip { display:inline-flex; align-items:center; gap:6px; background:rgba(139,92,246,0.2); color:#a78bfa; padding:4px 10px; border-radius:20px; font-size:13px; }
+.chip button { background:none; border:none; color:inherit; cursor:pointer; font-size:14px; line-height:1; }
+.chip-select { display:flex; gap:8px; align-items:center; }
+.chip-select select { flex:1; padding:10px 12px; border-radius:8px; border:1px solid #2a2a3a; background:#0f0f13; color:#fff; }
+
+.item-row { display:flex; align-items:center; gap:12px; padding:12px; border-bottom:1px solid #2a2a3a; }
+.item-row:last-child { border-bottom:none; }
+.item-cover { width:48px; height:48px; border-radius:8px; object-fit:cover; background:#2a2a3a; flex-shrink:0; display:flex; align-items:center; justify-content:center; color:#555; }
+.item-cover.round { border-radius:50%; }
+.item-info { flex:1; min-width:0; }
+.item-title { font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.item-meta { font-size:12px; color:#888; margin-top:2px; }
+.item-actions { display:flex; gap:6px; flex-shrink:0; }
 
 .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.7); display:flex; align-items:center; justify-content:center; z-index:100; padding:20px; }
 .modal-overlay.hidden { display:none; }
@@ -81,37 +88,112 @@ textarea.file-input:focus { outline:none; border-color:#8b5cf6; }
   <h1>牦牛音乐 · <span>管理后台</span></h1>
 
   <div class="tabs">
-    <button class="tab active" id="tabManual" onclick="switchTab('manual')">手动上传</button>
-    <button class="tab" id="tabRequests" onclick="switchTab('requests')">📬 用户投稿</button>
+    <button class="tab active" id="tabSongs" onclick="switchTab('songs')">🎵 歌曲</button>
+    <button class="tab" id="tabArtists" onclick="switchTab('artists')">🎤 歌手</button>
+    <button class="tab" id="tabAlbums" onclick="switchTab('albums')">💿 专辑</button>
+    <button class="tab" id="tabRequests" onclick="switchTab('requests')">📬 投稿</button>
   </div>
 
-  <div id="panelManual">
+  <!-- ========== 歌曲 ========== -->
+  <div id="panelSongs">
     <div class="card">
       <h3>➕ 上传新歌曲</h3>
       <div class="form-row">
-        <div><label>MP3 文件（自动读歌名/歌手/专辑）</label><input type="file" class="file-input" id="mp3File" accept="audio/mpeg,audio/mp3"></div>
+        <div><label>MP3 文件（自动读歌名/专辑/歌手）</label><input type="file" class="file-input" id="mp3File" accept="audio/mpeg,audio/mp3"></div>
       </div>
       <div class="form-row">
         <div><label>歌名</label><input type="text" id="songTitle"></div>
-        <div><label>歌手</label><input type="text" id="songArtist"></div>
-        <div><label>专辑</label><input type="text" id="songAlbum"></div>
       </div>
+
       <div class="form-row">
-        <div><label>封面图（可选）</label><input type="file" class="file-input" id="coverFile" accept="image/*"></div>
+        <div>
+          <label>歌手（可多选，顺序即显示顺序）</label>
+          <div class="chip-list" id="selectedArtists"></div>
+          <div class="chip-select" style="margin-top:8px;">
+            <select id="artistPicker"></select>
+            <button class="btn btn-ghost btn-sm" onclick="addSelectedArtist()">+ 添加</button>
+            <button class="btn btn-ghost btn-sm" onclick="openNewArtist()">+ 新歌手</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div>
+          <label>专辑</label>
+          <div class="chip-select">
+            <select id="albumPicker"></select>
+            <button class="btn btn-ghost btn-sm" onclick="openNewAlbum()">+ 新专辑</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div><label>封面图（可选，无专辑封面时用）</label><input type="file" class="file-input" id="coverFile" accept="image/*"></div>
       </div>
       <div class="preview" id="coverPreview"></div>
+
       <div class="form-row">
         <div>
           <label>歌词（可选，粘贴框优先）</label>
           <input type="file" class="file-input" id="lyricsFile" accept=".lrc,.txt">
-          <textarea class="file-input" id="lyricsText" placeholder="或直接粘贴 LRC 歌词，例如：&#10;[00:12.34]第一句歌词&#10;[00:18.56]第二句歌词" style="margin-top:8px;"></textarea>
+          <textarea class="file-input" id="lyricsText" placeholder="或直接粘贴 LRC 歌词" style="margin-top:8px;"></textarea>
         </div>
       </div>
       <button class="btn btn-primary" id="uploadBtn" onclick="uploadSong()" disabled>上传</button>
       <div class="status" id="uploadStatus"></div>
     </div>
+
+    <div class="card">
+      <h3>📋 歌曲列表</h3>
+      <div id="songList">加载中...</div>
+    </div>
   </div>
 
+  <!-- ========== 歌手 ========== -->
+  <div id="panelArtists" class="hidden">
+    <div class="card">
+      <h3>➕ 新建歌手</h3>
+      <div class="form-row">
+        <div><label>歌手名</label><input type="text" id="newArtistName"></div>
+      </div>
+      <div class="form-row">
+        <div><label>歌手照片（可选）</label><input type="file" class="file-input" id="newArtistAvatar" accept="image/*"></div>
+      </div>
+      <div class="preview" id="newArtistPreview"></div>
+      <div class="form-row">
+        <div><label>简介（可选）</label><input type="text" id="newArtistBio"></div>
+      </div>
+      <button class="btn btn-primary" onclick="createArtistFromPanel()">创建歌手</button>
+      <div class="status" id="artistCreateStatus"></div>
+    </div>
+    <div class="card">
+      <h3>🎤 歌手列表</h3>
+      <div id="artistList">加载中...</div>
+    </div>
+  </div>
+
+  <!-- ========== 专辑 ========== -->
+  <div id="panelAlbums" class="hidden">
+    <div class="card">
+      <h3>➕ 新建专辑</h3>
+      <div class="form-row">
+        <div><label>专辑名</label><input type="text" id="newAlbumName"></div>
+        <div><label>所属歌手</label><select id="newAlbumArtist"></select></div>
+      </div>
+      <div class="form-row">
+        <div><label>专辑封面（一张即可，专辑内歌曲共用）</label><input type="file" class="file-input" id="newAlbumCover" accept="image/*"></div>
+      </div>
+      <div class="preview" id="newAlbumPreview"></div>
+      <button class="btn btn-primary" onclick="createAlbumFromPanel()">创建专辑</button>
+      <div class="status" id="albumCreateStatus"></div>
+    </div>
+    <div class="card">
+      <h3>💿 专辑列表</h3>
+      <div id="albumList">加载中...</div>
+    </div>
+  </div>
+
+  <!-- ========== 投稿 ========== -->
   <div id="panelRequests" class="hidden">
     <div class="card">
       <h3>📬 用户投稿</h3>
@@ -123,26 +205,34 @@ textarea.file-input:focus { outline:none; border-color:#8b5cf6; }
       <div id="requestList">加载中...</div>
     </div>
   </div>
-
-  <div class="card">
-    <h3>📋 我的歌曲列表</h3>
-    <div id="songList">加载中...</div>
-  </div>
 </div>
 
+<!-- 编辑歌曲弹窗 -->
 <div class="modal-overlay hidden" id="editModal">
   <div class="modal">
     <h3>编辑歌曲</h3>
     <input type="hidden" id="editId">
     <div class="form-row"><div><label>歌名</label><input type="text" id="editTitle"></div></div>
     <div class="form-row">
-      <div><label>歌手</label><input type="text" id="editArtist"></div>
-      <div><label>专辑</label><input type="text" id="editAlbum"></div>
+      <div>
+        <label>歌手</label>
+        <div class="chip-list" id="editSelectedArtists"></div>
+        <div class="chip-select" style="margin-top:8px;">
+          <select id="editArtistPicker"></select>
+          <button class="btn btn-ghost btn-sm" onclick="addEditArtist()">+ 添加</button>
+        </div>
+      </div>
     </div>
-    <div class="form-row"><div><label>更换封面图（可选）</label><input type="file" class="file-input" id="editCover" accept="image/*"></div></div>
+    <div class="form-row">
+      <div>
+        <label>专辑</label>
+        <select id="editAlbumPicker"></select>
+      </div>
+    </div>
+    <div class="form-row"><div><label>更换封面图</label><input type="file" class="file-input" id="editCover" accept="image/*"></div></div>
     <div class="preview" id="editCoverPreview"></div>
     <div class="form-row"><div>
-      <label>歌词（可选，粘贴框优先）</label>
+      <label>歌词</label>
       <input type="file" class="file-input" id="editLyrics" accept=".lrc,.txt">
       <textarea class="file-input" id="editLyricsText" placeholder="或直接粘贴 LRC 歌词" style="margin-top:8px;"></textarea>
     </div></div>
@@ -154,42 +244,179 @@ textarea.file-input:focus { outline:none; border-color:#8b5cf6; }
   </div>
 </div>
 
+<!-- 编辑歌手弹窗 -->
+<div class="modal-overlay hidden" id="editArtistModal">
+  <div class="modal">
+    <h3>编辑歌手</h3>
+    <input type="hidden" id="editArtistId">
+    <div class="form-row">
+      <div><label>歌手名</label><input type="text" id="editArtistNameInput"></div>
+    </div>
+    <div class="form-row">
+      <div><label>更换歌手照片（可选）</label><input type="file" class="file-input" id="editArtistAvatar" accept="image/*"></div>
+    </div>
+    <div class="preview" id="editArtistPreview"></div>
+    <div class="form-row">
+      <div><label>简介（可选）</label><input type="text" id="editArtistBio"></div>
+    </div>
+    <div class="status" id="editArtistStatus"></div>
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="closeEditArtist()">取消</button>
+      <button class="btn btn-primary" onclick="saveEditArtist()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 新建歌手弹窗（上传时用） -->
+<div class="modal-overlay hidden" id="quickArtistModal">
+  <div class="modal">
+    <h3>新建歌手</h3>
+    <div class="form-row"><div><label>歌手名</label><input type="text" id="quickArtistName"></div></div>
+    <div class="form-row"><div><label>歌手照片（可选）</label><input type="file" class="file-input" id="quickArtistAvatar" accept="image/*"></div></div>
+    <div class="preview" id="quickArtistPreview"></div>
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="closeQuickArtist()">取消</button>
+      <button class="btn btn-primary" onclick="createQuickArtist()">创建</button>
+    </div>
+  </div>
+</div>
+
+<!-- 新建专辑弹窗（上传时用） -->
+<div class="modal-overlay hidden" id="quickAlbumModal">
+  <div class="modal">
+    <h3>新建专辑</h3>
+    <div class="form-row">
+      <div><label>专辑名</label><input type="text" id="quickAlbumName"></div>
+      <div><label>歌手</label><select id="quickAlbumArtist"></select></div>
+    </div>
+    <div class="form-row"><div><label>专辑封面</label><input type="file" class="file-input" id="quickAlbumCover" accept="image/*"></div></div>
+    <div class="preview" id="quickAlbumPreview"></div>
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="closeQuickAlbum()">取消</button>
+      <button class="btn btn-primary" onclick="createQuickAlbum()">创建</button>
+    </div>
+  </div>
+</div>
+
 <script src="config.js"></script>
 <script>
 // ============================================================
-// 牦牛音乐 · 后台
+// 牦牛音乐 · 后台 v3（含歌手编辑）
 // ============================================================
 
 let editingSong = null;
+let editingArtists = [];
+let selectedArtists = [];
+let editingArtist = null;
+let allArtists = [];
+let allAlbums = [];
 let allRequests = [];
 let requestFilter = 'all';
 
 function esc(t) { const d = document.createElement('div'); d.textContent = t == null ? '' : t; return d.innerHTML; }
 
 function switchTab(which) {
-  document.getElementById('tabManual').classList.toggle('active', which === 'manual');
-  document.getElementById('tabRequests').classList.toggle('active', which === 'requests');
-  document.getElementById('panelManual').classList.toggle('hidden', which !== 'manual');
+  ['songs','artists','albums','requests'].forEach(function(t) {
+    document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1)).classList.toggle('active', t === which);
+  });
+  document.getElementById('panelSongs').classList.toggle('hidden', which !== 'songs');
+  document.getElementById('panelArtists').classList.toggle('hidden', which !== 'artists');
+  document.getElementById('panelAlbums').classList.toggle('hidden', which !== 'albums');
   document.getElementById('panelRequests').classList.toggle('hidden', which !== 'requests');
+  if (which === 'artists') loadArtists();
+  if (which === 'albums') loadAlbums();
   if (which === 'requests') loadRequests();
 }
 
-// ========== 手动上传 ==========
-document.getElementById('mp3File').addEventListener('change', function(e) {
+// ---------- 加载歌手/专辑 ----------
+async function loadArtistsAndAlbums() {
+  const [a, b] = await Promise.all([
+    supabaseClient.from('artists').select('*').order('name'),
+    supabaseClient.from('albums').select('*').order('name'),
+  ]);
+  allArtists = a.data || [];
+  allAlbums = b.data || [];
+  refreshArtistPickers();
+  refreshAlbumPickers();
+}
+
+function refreshArtistPickers() {
+  const opts = '<option value="">-- 选择歌手 --</option>' +
+    allArtists.map(function(a) { return `<option value="${a.id}">${esc(a.name)}</option>`; }).join('');
+  ['artistPicker', 'editArtistPicker', 'newAlbumArtist', 'quickAlbumArtist'].forEach(function(id) {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = opts;
+  });
+}
+
+function refreshAlbumPickers() {
+  const opts = '<option value="">-- 无专辑 --</option>' +
+    allAlbums.map(function(a) {
+      const artistName = a.artist_id ? (allArtists.find(function(x) { return x.id === a.artist_id; }) || {}).name || '' : '';
+      return `<option value="${a.id}">${esc(a.name)}${artistName ? ' - ' + esc(artistName) : ''}</option>`;
+    }).join('');
+  ['albumPicker', 'editAlbumPicker'].forEach(function(id) {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = opts;
+  });
+}
+
+// ---------- 歌手选择器 ----------
+function renderSelectedArtists() {
+  const el = document.getElementById('selectedArtists');
+  if (selectedArtists.length === 0) {
+    el.innerHTML = '<span style="color:#555;font-size:13px;">尚未选择歌手</span>';
+    return;
+  }
+  el.innerHTML = selectedArtists.map(function(a, i) {
+    return `<span class="chip">${esc(a.name)}<button onclick="removeSelectedArtist(${i})">✕</button></span>`;
+  }).join('');
+  updateUploadBtn();
+}
+
+function addSelectedArtist() {
+  const sel = document.getElementById('artistPicker');
+  const id = parseInt(sel.value);
+  if (!id) { alert('请选择歌手'); return; }
+  if (selectedArtists.some(function(a) { return a.id === id; })) { alert('已添加'); return; }
+  const artist = allArtists.find(function(a) { return a.id === id; });
+  if (artist) selectedArtists.push({ id: artist.id, name: artist.name });
+  sel.value = '';
+  renderSelectedArtists();
+}
+
+function removeSelectedArtist(i) {
+  selectedArtists.splice(i, 1);
+  renderSelectedArtists();
+}
+
+// ---------- 上传歌曲 ----------
+document.getElementById('mp3File').addEventListener('change', async function(e) {
   const file = e.target.files[0];
   if (!file) return;
   jsmediatags.read(file, {
     onSuccess: function(tag) {
       const t = tag.tags;
       if (t.title) document.getElementById('songTitle').value = t.title;
-      if (t.artist) document.getElementById('songArtist').value = t.artist;
-      if (t.album) document.getElementById('songAlbum').value = t.album;
+      if (t.album) {
+        const matched = allAlbums.find(function(a) { return a.name === t.album; });
+        if (matched) document.getElementById('albumPicker').value = matched.id;
+      }
+      if (t.artist) {
+        const names = t.artist.split(/[,、/&]/).map(function(s) { return s.trim(); }).filter(Boolean);
+        selectedArtists = [];
+        names.forEach(function(n) {
+          const matched = allArtists.find(function(a) { return a.name === n; });
+          if (matched) selectedArtists.push({ id: matched.id, name: matched.name });
+        });
+        renderSelectedArtists();
+      }
       document.getElementById('uploadStatus').textContent = '已读取：' + (t.title || '') + ' - ' + (t.artist || '');
-      checkUploadReady();
+      updateUploadBtn();
     },
     onError: function() {
       document.getElementById('uploadStatus').textContent = '无法读取标签，请手动填写';
-      checkUploadReady();
+      updateUploadBtn();
     }
   });
 });
@@ -199,9 +426,9 @@ document.getElementById('coverFile').addEventListener('change', function(e) {
   document.getElementById('coverPreview').innerHTML = file ? '<img src="' + URL.createObjectURL(file) + '">' : '';
 });
 
-document.getElementById('songTitle').addEventListener('input', checkUploadReady);
+document.getElementById('songTitle').addEventListener('input', updateUploadBtn);
 
-function checkUploadReady() {
+function updateUploadBtn() {
   const hasFile = document.getElementById('mp3File').files.length > 0;
   const hasTitle = document.getElementById('songTitle').value.trim() !== '';
   document.getElementById('uploadBtn').disabled = !(hasFile && hasTitle);
@@ -213,8 +440,7 @@ async function uploadSong() {
   const lyricsFile = document.getElementById('lyricsFile').files[0];
   const lyricsText = (document.getElementById('lyricsText').value || '').trim();
   const title = document.getElementById('songTitle').value.trim();
-  const artist = document.getElementById('songArtist').value.trim();
-  const album = document.getElementById('songAlbum').value.trim();
+  const albumId = document.getElementById('albumPicker').value || null;
   const status = document.getElementById('uploadStatus');
   const btn = document.getElementById('uploadBtn');
 
@@ -224,6 +450,7 @@ async function uploadSong() {
 
   try {
     const ts = Date.now();
+
     const audioPath = ts + '_' + mp3File.name.replace(/[^a-zA-Z0-9._-]/g, '_');
     const { error: e1 } = await supabaseClient.storage.from('audio').upload(audioPath, mp3File);
     if (e1) throw new Error('MP3 上传失败：' + e1.message);
@@ -251,30 +478,530 @@ async function uploadSong() {
       lyricsUrl = supabaseClient.storage.from('lyrics').getPublicUrl(p).data.publicUrl;
     }
 
-    const { error: e2 } = await supabaseClient.from('songs').insert({
-      title, artist: artist || null, album: album || null,
-      audio_url: audioUrl, cover_url: coverUrl, lyrics: lyricsUrl,
-    });
+    const artistNames = selectedArtists.map(function(a) { return a.name; }).join(',');
+
+    const { data: songRow, error: e2 } = await supabaseClient.from('songs').insert({
+      title,
+      artist: artistNames || null,
+      album: null,
+      album_id: albumId ? parseInt(albumId) : null,
+      audio_url: audioUrl,
+      cover_url: coverUrl,
+      lyrics: lyricsUrl,
+    }).select().single();
     if (e2) throw new Error('写库失败：' + e2.message);
 
+    if (selectedArtists.length > 0) {
+      const rels = selectedArtists.map(function(a, i) {
+        return { song_id: songRow.id, artist_id: a.id, position: i };
+      });
+      const { error: e3 } = await supabaseClient.from('song_artists').insert(rels);
+      if (e3) throw new Error('关联歌手失败：' + e3.message);
+    }
+
     status.textContent = '✅ 上传成功！';
-    ['mp3File','coverFile','lyricsFile','songTitle','songArtist','songAlbum','lyricsText'].forEach(function(id) {
+    ['mp3File','coverFile','lyricsFile','songTitle','lyricsText'].forEach(function(id) {
       const el = document.getElementById(id); if (el) el.value = '';
     });
+    document.getElementById('albumPicker').value = '';
     document.getElementById('coverPreview').innerHTML = '';
+    selectedArtists = [];
+    renderSelectedArtists();
+
     loadSongs();
   } catch (err) {
     status.textContent = '❌ ' + err.message;
   } finally {
     btn.disabled = false;
-    checkUploadReady();
+    updateUploadBtn();
   }
 }
 
-// ========== 投稿管理 ==========
+// ---------- 歌曲列表 ----------
+async function loadSongs() {
+  const el = document.getElementById('songList');
+  el.textContent = '加载中...';
+
+  const { data: songs, error } = await supabaseClient.from('songs').select('*').order('created_at', { ascending: false });
+  if (error) { el.textContent = '加载失败：' + error.message; return; }
+  if (!songs || songs.length === 0) { el.textContent = '还没有歌曲'; return; }
+
+  const songIds = songs.map(function(s) { return s.id; });
+  const { data: rels } = await supabaseClient.from('song_artists').select('song_id, artist_id, position').in('song_id', songIds);
+
+  const relMap = {};
+  (rels || []).forEach(function(r) {
+    if (!relMap[r.song_id]) relMap[r.song_id] = [];
+    relMap[r.song_id].push(r);
+  });
+
+  el.innerHTML = songs.map(function(s) {
+    const relList = (relMap[s.id] || []).sort(function(a,b) { return a.position - b.position; });
+    const artistNames = relList.map(function(r) {
+      const a = allArtists.find(function(x) { return x.id === r.artist_id; });
+      return a ? a.name : null;
+    }).filter(Boolean).join(' / ');
+
+    const album = s.album_id ? allAlbums.find(function(a) { return a.id === s.album_id; }) : null;
+    const albumName = album ? album.name : (s.album || '无专辑');
+
+    return `<div class="item-row">
+      ${s.cover_url ? '<img class="item-cover" src="' + s.cover_url + '">' : '<div class="item-cover">🎵</div>'}
+      <div class="item-info">
+        <div class="item-title">${esc(s.title)}</div>
+        <div class="item-meta">${esc(artistNames || s.artist || '未知歌手')} · ${esc(albumName)}${s.lyrics ? ' · 有歌词' : ''}</div>
+      </div>
+      <div class="item-actions">
+        <button class="btn btn-primary btn-sm" onclick="openEdit(${s.id})">编辑</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteSong(${s.id})">删除</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function deleteSong(id) {
+  if (!confirm('确定删除？')) return;
+  await supabaseClient.from('songs').delete().eq('id', id);
+  loadSongs();
+}
+
+// ---------- 编辑歌曲 ----------
+async function openEdit(id) {
+  const { data: song } = await supabaseClient.from('songs').select('*').eq('id', id).single();
+  if (!song) return;
+  editingSong = song;
+
+  document.getElementById('editId').value = song.id;
+  document.getElementById('editTitle').value = song.title;
+  document.getElementById('editAlbumPicker').value = song.album_id || '';
+  document.getElementById('editCover').value = '';
+  document.getElementById('editLyrics').value = '';
+  document.getElementById('editLyricsText').value = '';
+  document.getElementById('editCoverPreview').innerHTML = song.cover_url ? '<img src="' + song.cover_url + '">' : '';
+
+  const { data: rels } = await supabaseClient.from('song_artists').select('artist_id, position').eq('song_id', id).order('position');
+  editingArtists = (rels || []).map(function(r) {
+    const a = allArtists.find(function(x) { return x.id === r.artist_id; });
+    return a ? { id: a.id, name: a.name } : null;
+  }).filter(Boolean);
+  renderEditArtists();
+
+  if (song.lyrics) {
+    document.getElementById('editLyricsStatus').textContent = '当前已有歌词，正在加载...';
+    try {
+      const txt = await (await fetch(song.lyrics)).text();
+      document.getElementById('editLyricsText').value = txt;
+      document.getElementById('editLyricsStatus').textContent = '修改后保存会覆盖';
+    } catch (e) {
+      document.getElementById('editLyricsStatus').textContent = '歌词加载失败';
+    }
+  } else {
+    document.getElementById('editLyricsStatus').textContent = '当前无歌词';
+  }
+
+  document.getElementById('editModal').classList.remove('hidden');
+}
+
+function renderEditArtists() {
+  const el = document.getElementById('editSelectedArtists');
+  if (editingArtists.length === 0) {
+    el.innerHTML = '<span style="color:#555;font-size:13px;">尚未选择歌手</span>';
+    return;
+  }
+  el.innerHTML = editingArtists.map(function(a, i) {
+    return `<span class="chip">${esc(a.name)}<button onclick="removeEditArtist(${i})">✕</button></span>`;
+  }).join('');
+}
+
+function addEditArtist() {
+  const sel = document.getElementById('editArtistPicker');
+  const id = parseInt(sel.value);
+  if (!id) { alert('请选择歌手'); return; }
+  if (editingArtists.some(function(a) { return a.id === id; })) { alert('已添加'); return; }
+  const artist = allArtists.find(function(a) { return a.id === id; });
+  if (artist) editingArtists.push({ id: artist.id, name: artist.name });
+  sel.value = '';
+  renderEditArtists();
+}
+
+function removeEditArtist(i) {
+  editingArtists.splice(i, 1);
+  renderEditArtists();
+}
+
+function closeEdit() {
+  document.getElementById('editModal').classList.add('hidden');
+  editingSong = null;
+  editingArtists = [];
+}
+
+document.getElementById('editCover').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  const preview = document.getElementById('editCoverPreview');
+  if (!file) { preview.innerHTML = editingSong && editingSong.cover_url ? '<img src="' + editingSong.cover_url + '">' : ''; return; }
+  preview.innerHTML = '<img src="' + URL.createObjectURL(file) + '">';
+});
+
+async function saveEdit() {
+  const id = document.getElementById('editId').value;
+  const title = document.getElementById('editTitle').value.trim();
+  const albumId = document.getElementById('editAlbumPicker').value || null;
+  const coverFile = document.getElementById('editCover').files[0];
+  const lyricsFile = document.getElementById('editLyrics').files[0];
+  const lyricsText = (document.getElementById('editLyricsText').value || '').trim();
+
+  if (!title) { alert('歌名不能为空'); return; }
+
+  try {
+    let coverUrl = editingSong.cover_url;
+    let lyricsUrl = editingSong.lyrics;
+    const ts = Date.now();
+
+    if (coverFile) {
+      const p = ts + '_' + coverFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const { error } = await supabaseClient.storage.from('covers').upload(p, coverFile);
+      if (error) throw new Error('封面上传失败：' + error.message);
+      coverUrl = supabaseClient.storage.from('covers').getPublicUrl(p).data.publicUrl;
+    }
+
+    if (lyricsText) {
+      const p = ts + '_lyrics.lrc';
+      const blob = new Blob([lyricsText], { type: 'text/plain;charset=utf-8' });
+      const { error } = await supabaseClient.storage.from('lyrics').upload(p, blob);
+      if (error) throw new Error('歌词上传失败：' + error.message);
+      lyricsUrl = supabaseClient.storage.from('lyrics').getPublicUrl(p).data.publicUrl;
+    } else if (lyricsFile) {
+      const p = ts + '_' + lyricsFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const { error } = await supabaseClient.storage.from('lyrics').upload(p, lyricsFile);
+      if (error) throw new Error('歌词上传失败：' + error.message);
+      lyricsUrl = supabaseClient.storage.from('lyrics').getPublicUrl(p).data.publicUrl;
+    }
+
+    const artistNames = editingArtists.map(function(a) { return a.name; }).join(',');
+
+    const { error } = await supabaseClient.from('songs').update({
+      title,
+      artist: artistNames || null,
+      album_id: albumId ? parseInt(albumId) : null,
+      cover_url: coverUrl,
+      lyrics: lyricsUrl,
+    }).eq('id', id);
+    if (error) throw new Error('更新失败：' + error.message);
+
+    await supabaseClient.from('song_artists').delete().eq('song_id', id);
+    if (editingArtists.length > 0) {
+      const rels = editingArtists.map(function(a, i) {
+        return { song_id: parseInt(id), artist_id: a.id, position: i };
+      });
+      await supabaseClient.from('song_artists').insert(rels);
+    }
+
+    closeEdit();
+    loadSongs();
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+// ---------- 歌手 ----------
+document.getElementById('newArtistAvatar').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  document.getElementById('newArtistPreview').innerHTML = file ? '<img src="' + URL.createObjectURL(file) + '">' : '';
+});
+
+async function createArtistFromPanel() {
+  const name = document.getElementById('newArtistName').value.trim();
+  const bio = document.getElementById('newArtistBio').value.trim();
+  const avatarFile = document.getElementById('newArtistAvatar').files[0];
+  const status = document.getElementById('artistCreateStatus');
+
+  if (!name) { status.textContent = '请填歌手名'; return; }
+  status.textContent = '创建中...';
+
+  try {
+    let avatarUrl = null;
+    if (avatarFile) {
+      const p = Date.now() + '_' + avatarFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const { error } = await supabaseClient.storage.from('artist_avatars').upload(p, avatarFile);
+      if (error) throw new Error('照片上传失败：' + error.message);
+      avatarUrl = supabaseClient.storage.from('artist_avatars').getPublicUrl(p).data.publicUrl;
+    }
+
+    const { error } = await supabaseClient.from('artists').insert({ name, avatar_url: avatarUrl, bio: bio || null });
+    if (error) {
+      if (error.code === '23505') throw new Error('歌手已存在');
+      throw new Error(error.message);
+    }
+
+    status.textContent = '✅ 创建成功';
+    document.getElementById('newArtistName').value = '';
+    document.getElementById('newArtistBio').value = '';
+    document.getElementById('newArtistAvatar').value = '';
+    document.getElementById('newArtistPreview').innerHTML = '';
+    await loadArtistsAndAlbums();
+    loadArtists();
+  } catch (err) {
+    status.textContent = '❌ ' + err.message;
+  }
+}
+
+async function loadArtists() {
+  const el = document.getElementById('artistList');
+  el.textContent = '加载中...';
+  const { data, error } = await supabaseClient.from('artists').select('*').order('name');
+  if (error) { el.textContent = '加载失败'; return; }
+  if (!data || data.length === 0) { el.textContent = '还没有歌手'; return; }
+
+  const { data: rels } = await supabaseClient.from('song_artists').select('artist_id');
+  const countMap = {};
+  (rels || []).forEach(function(r) { countMap[r.artist_id] = (countMap[r.artist_id] || 0) + 1; });
+
+  el.innerHTML = data.map(function(a) {
+    return `<div class="item-row">
+      ${a.avatar_url ? '<img class="item-cover round" src="' + a.avatar_url + '">' : '<div class="item-cover round">🎤</div>'}
+      <div class="item-info">
+        <div class="item-title">${esc(a.name)}</div>
+        <div class="item-meta">${countMap[a.id] || 0} 首歌曲${a.bio ? ' · ' + esc(a.bio) : ''}</div>
+      </div>
+      <div class="item-actions">
+        <button class="btn btn-primary btn-sm" onclick="openEditArtist(${a.id})">编辑</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteArtist(${a.id})">删除</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function deleteArtist(id) {
+  if (!confirm('删除这位歌手？关联的歌曲不会删，但会失去歌手信息')) return;
+  await supabaseClient.from('artists').delete().eq('id', id);
+  await loadArtistsAndAlbums();
+  loadArtists();
+}
+
+// ---------- 编辑歌手 ----------
+document.getElementById('editArtistAvatar').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  const preview = document.getElementById('editArtistPreview');
+  if (!file) {
+    preview.innerHTML = editingArtist && editingArtist.avatar_url
+      ? '<img src="' + editingArtist.avatar_url + '">' : '';
+    return;
+  }
+  preview.innerHTML = '<img src="' + URL.createObjectURL(file) + '">';
+});
+
+async function openEditArtist(id) {
+  const { data: artist, error } = await supabaseClient.from('artists').select('*').eq('id', id).single();
+  if (error || !artist) { alert('获取歌手信息失败'); return; }
+
+  editingArtist = artist;
+  document.getElementById('editArtistId').value = artist.id;
+  document.getElementById('editArtistNameInput').value = artist.name;
+  document.getElementById('editArtistBio').value = artist.bio || '';
+  document.getElementById('editArtistAvatar').value = '';
+  document.getElementById('editArtistPreview').innerHTML = artist.avatar_url
+    ? '<img src="' + artist.avatar_url + '">' : '';
+  document.getElementById('editArtistStatus').textContent = '';
+
+  document.getElementById('editArtistModal').classList.remove('hidden');
+}
+
+function closeEditArtist() {
+  document.getElementById('editArtistModal').classList.add('hidden');
+  editingArtist = null;
+}
+
+async function saveEditArtist() {
+  const id = document.getElementById('editArtistId').value;
+  const name = document.getElementById('editArtistNameInput').value.trim();
+  const bio = document.getElementById('editArtistBio').value.trim();
+  const avatarFile = document.getElementById('editArtistAvatar').files[0];
+  const status = document.getElementById('editArtistStatus');
+
+  if (!name) { status.textContent = '歌手名不能为空'; return; }
+  status.textContent = '保存中...';
+
+  try {
+    let avatarUrl = editingArtist.avatar_url;
+
+    if (avatarFile) {
+      const p = Date.now() + '_' + avatarFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const { error: upErr } = await supabaseClient.storage.from('artist_avatars').upload(p, avatarFile);
+      if (upErr) throw new Error('照片上传失败：' + upErr.message);
+      avatarUrl = supabaseClient.storage.from('artist_avatars').getPublicUrl(p).data.publicUrl;
+    }
+
+    const { error } = await supabaseClient.from('artists').update({
+      name,
+      bio: bio || null,
+      avatar_url: avatarUrl,
+    }).eq('id', id);
+
+    if (error) {
+      if (error.code === '23505') throw new Error('歌手名已存在');
+      throw new Error(error.message);
+    }
+
+    closeEditArtist();
+    await loadArtistsAndAlbums();
+    loadArtists();
+  } catch (err) {
+    status.textContent = '❌ ' + err.message;
+  }
+}
+
+// ---------- 专辑 ----------
+document.getElementById('newAlbumCover').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  document.getElementById('newAlbumPreview').innerHTML = file ? '<img src="' + URL.createObjectURL(file) + '">' : '';
+});
+
+async function createAlbumFromPanel() {
+  const name = document.getElementById('newAlbumName').value.trim();
+  const artistId = document.getElementById('newAlbumArtist').value || null;
+  const coverFile = document.getElementById('newAlbumCover').files[0];
+  const status = document.getElementById('albumCreateStatus');
+
+  if (!name) { status.textContent = '请填专辑名'; return; }
+  status.textContent = '创建中...';
+
+  try {
+    let coverUrl = null;
+    if (coverFile) {
+      const p = Date.now() + '_' + coverFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const { error } = await supabaseClient.storage.from('album_covers').upload(p, coverFile);
+      if (error) throw new Error('封面上传失败：' + error.message);
+      coverUrl = supabaseClient.storage.from('album_covers').getPublicUrl(p).data.publicUrl;
+    }
+
+    const { error } = await supabaseClient.from('albums').insert({
+      name,
+      artist_id: artistId ? parseInt(artistId) : null,
+      cover_url: coverUrl,
+    });
+    if (error) throw new Error(error.message);
+
+    status.textContent = '✅ 创建成功';
+    document.getElementById('newAlbumName').value = '';
+    document.getElementById('newAlbumArtist').value = '';
+    document.getElementById('newAlbumCover').value = '';
+    document.getElementById('newAlbumPreview').innerHTML = '';
+    await loadArtistsAndAlbums();
+    loadAlbums();
+  } catch (err) {
+    status.textContent = '❌ ' + err.message;
+  }
+}
+
+async function loadAlbums() {
+  const el = document.getElementById('albumList');
+  el.textContent = '加载中...';
+  const { data, error } = await supabaseClient.from('albums').select('*').order('name');
+  if (error) { el.textContent = '加载失败'; return; }
+  if (!data || data.length === 0) { el.textContent = '还没有专辑'; return; }
+
+  const { data: songs } = await supabaseClient.from('songs').select('album_id').not('album_id', 'is', null);
+  const countMap = {};
+  (songs || []).forEach(function(s) { countMap[s.album_id] = (countMap[s.album_id] || 0) + 1; });
+
+  el.innerHTML = data.map(function(a) {
+    const artistName = a.artist_id ? (allArtists.find(function(x) { return x.id === a.artist_id; }) || {}).name || '' : '';
+    return `<div class="item-row">
+      ${a.cover_url ? '<img class="item-cover" src="' + a.cover_url + '">' : '<div class="item-cover">💿</div>'}
+      <div class="item-info">
+        <div class="item-title">${esc(a.name)}</div>
+        <div class="item-meta">${esc(artistName || '未知歌手')} · ${countMap[a.id] || 0} 首</div>
+      </div>
+      <div class="item-actions">
+        <button class="btn btn-danger btn-sm" onclick="deleteAlbum(${a.id})">删除</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function deleteAlbum(id) {
+  if (!confirm('删除这张专辑？关联歌曲不会删，但会失去专辑信息')) return;
+  await supabaseClient.from('albums').delete().eq('id', id);
+  await loadArtistsAndAlbums();
+  loadAlbums();
+}
+
+// ---------- 快速新建 ----------
+document.getElementById('quickArtistAvatar').addEventListener('change', function(e) {
+  const f = e.target.files[0];
+  document.getElementById('quickArtistPreview').innerHTML = f ? '<img src="' + URL.createObjectURL(f) + '">' : '';
+});
+document.getElementById('quickAlbumCover').addEventListener('change', function(e) {
+  const f = e.target.files[0];
+  document.getElementById('quickAlbumPreview').innerHTML = f ? '<img src="' + URL.createObjectURL(f) + '">' : '';
+});
+
+function openNewArtist() { document.getElementById('quickArtistModal').classList.remove('hidden'); }
+function closeQuickArtist() { document.getElementById('quickArtistModal').classList.add('hidden'); }
+
+async function createQuickArtist() {
+  const name = document.getElementById('quickArtistName').value.trim();
+  const file = document.getElementById('quickArtistAvatar').files[0];
+  if (!name) { alert('请填歌手名'); return; }
+  try {
+    let avatarUrl = null;
+    if (file) {
+      const p = Date.now() + '_' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const { error } = await supabaseClient.storage.from('artist_avatars').upload(p, file);
+      if (error) throw new Error(error.message);
+      avatarUrl = supabaseClient.storage.from('artist_avatars').getPublicUrl(p).data.publicUrl;
+    }
+    const { data, error } = await supabaseClient.from('artists').insert({ name, avatar_url: avatarUrl }).select().single();
+    if (error) throw new Error(error.code === '23505' ? '歌手已存在' : error.message);
+    await loadArtistsAndAlbums();
+    selectedArtists.push({ id: data.id, name: data.name });
+    renderSelectedArtists();
+    document.getElementById('quickArtistName').value = '';
+    document.getElementById('quickArtistAvatar').value = '';
+    document.getElementById('quickArtistPreview').innerHTML = '';
+    closeQuickArtist();
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+function openNewAlbum() { document.getElementById('quickAlbumModal').classList.remove('hidden'); }
+function closeQuickAlbum() { document.getElementById('quickAlbumModal').classList.add('hidden'); }
+
+async function createQuickAlbum() {
+  const name = document.getElementById('quickAlbumName').value.trim();
+  const artistId = document.getElementById('quickAlbumArtist').value || null;
+  const file = document.getElementById('quickAlbumCover').files[0];
+  if (!name) { alert('请填专辑名'); return; }
+  try {
+    let coverUrl = null;
+    if (file) {
+      const p = Date.now() + '_' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const { error } = await supabaseClient.storage.from('album_covers').upload(p, file);
+      if (error) throw new Error(error.message);
+      coverUrl = supabaseClient.storage.from('album_covers').getPublicUrl(p).data.publicUrl;
+    }
+    const { data, error } = await supabaseClient.from('albums').insert({
+      name,
+      artist_id: artistId ? parseInt(artistId) : null,
+      cover_url: coverUrl,
+    }).select().single();
+    if (error) throw new Error(error.message);
+    await loadArtistsAndAlbums();
+    document.getElementById('albumPicker').value = data.id;
+    document.getElementById('quickAlbumName').value = '';
+    document.getElementById('quickAlbumArtist').value = '';
+    document.getElementById('quickAlbumCover').value = '';
+    document.getElementById('quickAlbumPreview').innerHTML = '';
+    closeQuickAlbum();
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+// ---------- 投稿 ----------
 async function loadRequests() {
   const el = document.getElementById('requestList');
-  if (!el) return;
   el.textContent = '加载中...';
   const { data, error } = await supabaseClient.from('song_requests').select('*').order('created_at', { ascending: false });
   if (error) { el.textContent = '加载失败：' + error.message; return; }
@@ -300,10 +1027,7 @@ function renderRequests() {
   if (requestFilter === 'pending') list = allRequests.filter(function(r) { return r.status !== 'done'; });
   if (requestFilter === 'done') list = allRequests.filter(function(r) { return r.status === 'done'; });
 
-  if (list.length === 0) {
-    el.innerHTML = '<div class="status">还没有投稿</div>';
-    return;
-  }
+  if (list.length === 0) { el.innerHTML = '<div class="status">还没有投稿</div>'; return; }
 
   el.innerHTML = list.map(function(r) {
     const done = r.status === 'done';
@@ -332,7 +1056,7 @@ function renderRequests() {
 }
 
 async function markRequest(id, status) {
-  await supabaseClient.from('song_requests').update({ status: status }).eq('id', id);
+  await supabaseClient.from('song_requests').update({ status }).eq('id', id);
   loadRequests();
 }
 
@@ -342,124 +1066,12 @@ async function deleteRequest(id) {
   loadRequests();
 }
 
-// ========== 歌曲列表 ==========
-async function loadSongs() {
-  const el = document.getElementById('songList');
-  el.textContent = '加载中...';
-  const { data: songs, error } = await supabaseClient.from('songs').select('*').order('created_at', { ascending: false });
-  if (error) { el.textContent = '加载失败：' + error.message; return; }
-  if (!songs || songs.length === 0) { el.textContent = '还没有歌曲'; return; }
-
-  el.innerHTML = songs.map(function(s) {
-    return `<div class="song-item">
-      ${s.cover_url ? '<img class="song-cover" src="' + s.cover_url + '">' : '<div class="song-cover">🎵</div>'}
-      <div class="song-info">
-        <div class="song-title">${esc(s.title)}</div>
-        <div class="song-meta">${esc(s.artist || '未知歌手')} · ${esc(s.album || '无专辑')}${s.lyrics ? ' · 有歌词' : ''}</div>
-      </div>
-      <div class="song-actions">
-        <button class="btn btn-primary btn-sm" onclick="openEdit(${s.id})">编辑</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteSong(${s.id})">删除</button>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-async function deleteSong(id) {
-  if (!confirm('确定删除？')) return;
-  await supabaseClient.from('songs').delete().eq('id', id);
+// ---------- 启动 ----------
+(async function() {
+  await loadArtistsAndAlbums();
+  renderSelectedArtists();
   loadSongs();
-}
-
-async function openEdit(id) {
-  const { data: song } = await supabaseClient.from('songs').select('*').eq('id', id).single();
-  if (!song) return;
-  editingSong = song;
-  document.getElementById('editId').value = song.id;
-  document.getElementById('editTitle').value = song.title;
-  document.getElementById('editArtist').value = song.artist || '';
-  document.getElementById('editAlbum').value = song.album || '';
-  document.getElementById('editCover').value = '';
-  document.getElementById('editLyrics').value = '';
-  document.getElementById('editLyricsText').value = '';
-  document.getElementById('editCoverPreview').innerHTML = song.cover_url ? '<img src="' + song.cover_url + '">' : '';
-
-  if (song.lyrics) {
-    document.getElementById('editLyricsStatus').textContent = '当前已有歌词，正在加载...';
-    try {
-      const txt = await (await fetch(song.lyrics)).text();
-      document.getElementById('editLyricsText').value = txt;
-      document.getElementById('editLyricsStatus').textContent = '修改后保存会覆盖';
-    } catch (e) {
-      document.getElementById('editLyricsStatus').textContent = '歌词加载失败';
-    }
-  } else {
-    document.getElementById('editLyricsStatus').textContent = '当前无歌词';
-  }
-  document.getElementById('editModal').classList.remove('hidden');
-}
-
-function closeEdit() {
-  document.getElementById('editModal').classList.add('hidden');
-  editingSong = null;
-}
-
-document.getElementById('editCover').addEventListener('change', function(e) {
-  const file = e.target.files[0];
-  const preview = document.getElementById('editCoverPreview');
-  if (!file) { preview.innerHTML = editingSong && editingSong.cover_url ? '<img src="' + editingSong.cover_url + '">' : ''; return; }
-  preview.innerHTML = '<img src="' + URL.createObjectURL(file) + '">';
-});
-
-async function saveEdit() {
-  const id = document.getElementById('editId').value;
-  const title = document.getElementById('editTitle').value.trim();
-  const artist = document.getElementById('editArtist').value.trim();
-  const album = document.getElementById('editAlbum').value.trim();
-  const coverFile = document.getElementById('editCover').files[0];
-  const lyricsFile = document.getElementById('editLyrics').files[0];
-  const editLyricsText = (document.getElementById('editLyricsText').value || '').trim();
-  if (!title) { alert('歌名不能为空'); return; }
-
-  try {
-    let coverUrl = editingSong.cover_url;
-    let lyricsUrl = editingSong.lyrics;
-    const ts = Date.now();
-
-    if (coverFile) {
-      const p = ts + '_' + coverFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-      const { error } = await supabaseClient.storage.from('covers').upload(p, coverFile);
-      if (error) throw new Error('封面上传失败：' + error.message);
-      coverUrl = supabaseClient.storage.from('covers').getPublicUrl(p).data.publicUrl;
-    }
-
-    if (editLyricsText) {
-      const p = ts + '_lyrics.lrc';
-      const blob = new Blob([editLyricsText], { type: 'text/plain;charset=utf-8' });
-      const { error } = await supabaseClient.storage.from('lyrics').upload(p, blob);
-      if (error) throw new Error('歌词上传失败：' + error.message);
-      lyricsUrl = supabaseClient.storage.from('lyrics').getPublicUrl(p).data.publicUrl;
-    } else if (lyricsFile) {
-      const p = ts + '_' + lyricsFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-      const { error } = await supabaseClient.storage.from('lyrics').upload(p, lyricsFile);
-      if (error) throw new Error('歌词上传失败：' + error.message);
-      lyricsUrl = supabaseClient.storage.from('lyrics').getPublicUrl(p).data.publicUrl;
-    }
-
-    const { error } = await supabaseClient.from('songs').update({
-      title, artist: artist || null, album: album || null,
-      cover_url: coverUrl, lyrics: lyricsUrl,
-    }).eq('id', id);
-    if (error) throw new Error('更新失败：' + error.message);
-
-    closeEdit();
-    loadSongs();
-  } catch (err) {
-    alert(err.message);
-  }
-}
-
-loadSongs();
+})();
 </script>
 </body>
 </html>
