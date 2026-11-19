@@ -2,295 +2,348 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>牦牛音乐 · 想听就有</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>牦牛影视</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.8/dist/hls.min.js"></script>
 <style>
-:root{--bg:#0a0a0c;--bg-soft:#121216;--bg-card:#17171c;--bg-hover:#1f1f26;--text:#f5f5f7;--text-dim:#8e8e93;--text-faint:#5a5a60;--accent:#8b5cf6;--accent-soft:rgba(139,92,246,.15);--radius:14px;--radius-sm:10px}
-*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display',system-ui,sans-serif;font-size:14px;height:100vh;overflow:hidden}
-button{font-family:inherit;cursor:pointer}
-.app{display:flex;height:100vh}
-.sidebar{width:240px;flex-shrink:0;background:var(--bg-soft);border-right:1px solid rgba(255,255,255,.06);display:flex;flex-direction:column;padding:20px 12px;overflow-y:auto}
-.brand{display:flex;align-items:center;gap:10px;padding:0 8px;margin-bottom:6px}
-.brand-icon{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,var(--accent),#6366f1);display:flex;align-items:center;justify-content:center;font-size:16px}
-.brand-name{font-size:17px;font-weight:700}
-.brand-name span{color:var(--accent)}
-.brand-slogan{font-size:11px;color:var(--text-faint);padding:0 8px;margin-bottom:24px}
-.nav-section{margin-bottom:24px}
-.nav-label{font-size:11px;font-weight:600;color:var(--text-faint);text-transform:uppercase;letter-spacing:.6px;padding:0 8px;margin-bottom:8px}
-.nav-item{display:flex;align-items:center;gap:12px;padding:9px 10px;border-radius:var(--radius-sm);color:var(--text-dim);cursor:pointer;font-size:14px;font-weight:500;border:none;background:none;width:100%;text-align:left}
-.nav-item:hover,.nav-item.active{background:var(--bg-hover);color:var(--text)}
-.nav-item.active{background:var(--accent-soft);color:var(--accent)}
-.nav-item .icon{width:18px;font-size:15px}
-.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
-.topbar{height:64px;flex-shrink:0;display:flex;align-items:center;gap:16px;padding:0 28px;background:rgba(10,10,12,.8);backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,.05);z-index:10}
-.page-title{font-size:20px;font-weight:700}
-.search-box{margin-left:auto;display:flex;align-items:center;gap:8px;background:var(--bg-card);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:8px 14px;width:260px}
-.search-box input{background:none;border:none;outline:none;color:var(--text);font-size:14px;width:100%}
-.content{flex:1;overflow-y:auto;padding:28px 28px 32px}
-.btn{padding:10px 20px;border-radius:var(--radius-sm);border:none;cursor:pointer;font-size:14px;font-weight:500}
-.btn-primary{background:var(--accent);color:#fff}
-.btn-sm{padding:6px 12px;font-size:12px}
-.empty{text-align:center;padding:80px 20px;color:var(--text-faint)}
-.empty-icon{font-size:56px;margin-bottom:16px;opacity:.4}
-.song-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:20px;margin-bottom:40px}
-.song-card{position:relative;transition:transform .2s}
-.song-card:hover{transform:translateY(-4px)}
-.card-cover-wrap{position:relative;border-radius:var(--radius);overflow:hidden;aspect-ratio:1;background:linear-gradient(135deg,#1e1e26,#14141a);margin-bottom:12px;cursor:pointer}
-.card-cover-wrap img{width:100%;height:100%;object-fit:cover;display:block}
-.card-cover-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:48px;color:rgba(255,255,255,.15)}
-.card-play{position:absolute;right:12px;bottom:12px;width:44px;height:44px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;border:none;opacity:0;transform:translateY(8px);transition:all .25s}
-.song-card:hover .card-play{opacity:1;transform:translateY(0)}
-.card-title{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px;cursor:pointer}
-.card-artist{font-size:12.5px;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
-.card-artist span:hover{color:var(--accent)}
-.artist-row{display:flex;gap:20px;overflow-x:auto;padding-bottom:12px;margin-bottom:32px}
-.artist-card{flex-shrink:0;width:120px;text-align:center;cursor:pointer;transition:transform .2s}
-.artist-card:hover{transform:translateY(-4px)}
-.artist-card-avatar{width:120px;height:120px;border-radius:50%;overflow:hidden;margin-bottom:10px;background:linear-gradient(135deg,#2a2a35,#1a1a22);display:flex;align-items:center;justify-content:center;font-size:40px;color:rgba(255,255,255,.2)}
-.artist-card-avatar img{width:100%;height:100%;object-fit:cover}
-.artist-card-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.artist-card-count{font-size:11px;color:var(--text-faint);margin-top:2px}
-.album-card{flex-shrink:0;width:160px;cursor:pointer;transition:transform .2s}
-.album-card:hover{transform:translateY(-4px)}
-.album-card-cover{width:160px;height:160px;border-radius:var(--radius);overflow:hidden;margin-bottom:10px;background:linear-gradient(135deg,#2a2a35,#1a1a22);display:flex;align-items:center;justify-content:center;font-size:48px;color:rgba(255,255,255,.15)}
-.album-card-cover img{width:100%;height:100%;object-fit:cover}
-.album-card-name{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.album-card-artist{font-size:12px;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
-.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
-.section-title{font-size:18px;font-weight:700}
-.section-more{font-size:13px;color:var(--text-dim);cursor:pointer;background:none;border:none}
-.user-row{display:flex;align-items:center;gap:14px;padding:12px;border-radius:var(--radius-sm);cursor:pointer}
-.user-row:hover{background:var(--bg-hover)}
-.row-cover{width:44px;height:44px;border-radius:8px;overflow:hidden;background:linear-gradient(135deg,#1e1e26,#14141a);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px;color:rgba(255,255,255,.2)}
-.row-cover img{width:100%;height:100%;object-fit:cover}
-.row-info{flex:1;min-width:0}
-.row-title{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px}
-.row-meta{font-size:12.5px;color:var(--text-dim)}
-.artist-hero{display:flex;align-items:flex-end;gap:28px;padding:40px 0;margin-bottom:32px;border-bottom:1px solid rgba(255,255,255,.06)}
-.artist-hero-avatar{width:180px;height:180px;border-radius:50%;overflow:hidden;flex-shrink:0;background:linear-gradient(135deg,#2a2a35,#1a1a22);display:flex;align-items:center;justify-content:center;font-size:72px;color:rgba(255,255,255,.15)}
-.artist-hero-avatar.album{border-radius:14px}
-.artist-hero-avatar img{width:100%;height:100%;object-fit:cover}
-.artist-hero-name{font-size:56px;font-weight:800;letter-spacing:-2px;margin-bottom:16px;line-height:1}
-.artist-hero-meta{font-size:14px;color:var(--text-dim)}
-.artist-hero-label{font-size:12px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
-.download-banner{background:linear-gradient(135deg,rgba(139,92,246,.15),rgba(99,102,241,.08));border:1px solid rgba(139,92,246,.3);border-radius:var(--radius);padding:20px 24px;margin-bottom:32px;display:flex;align-items:center;gap:20px;flex-wrap:wrap}
-@media(max-width:900px){.sidebar{position:fixed;left:0;top:0;bottom:0;z-index:200;transform:translateX(-100%);transition:transform .3s}.sidebar.open{transform:translateX(0)}.menu-toggle{display:flex}.topbar{padding:0 16px;gap:12px}.page-title{font-size:17px}.search-box{width:160px;padding:7px 10px}.content{padding:20px 16px 24px}.song-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:14px}.artist-hero{flex-direction:column;align-items:center;text-align:center;padding:24px 0}.artist-hero-avatar{width:140px;height:140px;font-size:56px}.artist-hero-name{font-size:36px}}
-@media(max-width:480px){.song-grid{grid-template-columns:repeat(2,1fr);gap:12px}.search-box{display:none}}
-.menu-toggle{display:none;width:36px;height:36px;border-radius:8px;background:var(--bg-card);border:none;color:var(--text);cursor:pointer;align-items:center;justify-content:center;font-size:18px}
-.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:150}
-.sidebar-overlay.show{display:block}
+  :root {
+    --bg: #08080a; --panel: rgba(20, 20, 25, 0.7); --border: rgba(255, 255, 255, 0.08);
+    --text: #f0f0f5; --muted: #8e8e9c; --accent: #ff4757; --accent-hover: #ff6b81;
+    --radius: 16px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: radial-gradient(circle at top right, #1a1015 0%, var(--bg) 50%);
+    color: var(--text); font-family: -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased; overflow-x: hidden;
+  }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+
+  /* 顶栏 */
+  .topbar {
+    display: flex; align-items: center; gap: 20px; padding: 0 40px; height: 72px;
+    position: sticky; top: 0; z-index: 100; background: rgba(8, 8, 10, 0.6);
+    backdrop-filter: blur(20px); border-bottom: 1px solid var(--border);
+  }
+  .brand { font-size: 24px; font-weight: 900; letter-spacing: 1px; }
+  .brand span { color: var(--accent); }
+  .top-actions { margin-left: auto; display: flex; gap: 14px; align-items: center; }
+  .btn-outline {
+    background: transparent; color: var(--text); text-decoration: none;
+    padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600;
+    border: 1px solid var(--border); cursor: pointer; transition: .2s;
+  }
+  .btn-outline:hover { background: rgba(255,255,255,0.05); }
+
+  /* 搜索区 */
+  .hero { padding: 80px 20px 60px; display: flex; flex-direction: column; align-items: center; transition: 0.3s; }
+  .hero.hide { display: none; }
+  .hero h1 { font-size: 38px; font-weight: 800; margin-bottom: 12px; }
+  .hero h1 em { font-style: normal; color: var(--accent); }
+  .hero p { color: var(--muted); font-size: 15px; margin-bottom: 32px; }
+  .big-search { width: 100%; max-width: 680px; position: relative; }
+  .big-search input {
+    width: 100%; height: 64px; padding: 0 24px 0 60px; border-radius: 99px;
+    border: 1px solid var(--border); background: rgba(25, 25, 30, 0.8); color: #fff;
+    font-size: 18px; outline: none; backdrop-filter: blur(10px); transition: .3s;
+  }
+  .big-search input:focus { border-color: var(--accent); }
+  .big-search .ico { position: absolute; left: 24px; top: 50%; transform: translateY(-50%); font-size: 20px; color: var(--muted); }
+
+  /* 网格 */
+  .main-content { padding: 0 40px 60px; max-width: 1600px; margin: 0 auto; }
+  .section-title { font-size: 20px; font-weight: 700; margin-bottom: 24px; display: flex; align-items: center; gap: 10px; }
+  .section-title::before { content: ''; width: 4px; height: 18px; background: var(--accent); border-radius: 2px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 24px; }
+  .card {
+    background: var(--panel); border-radius: var(--radius); overflow: hidden;
+    cursor: pointer; transition: .3s; border: 1px solid var(--border);
+    display: flex; flex-direction: column;
+  }
+  .card:hover { transform: translateY(-6px); border-color: rgba(255,71,87,0.5); box-shadow: 0 15px 30px rgba(0,0,0,0.6); }
+  .card-cover {
+    width: 100%; aspect-ratio: 3/4; background: linear-gradient(135deg, #1f1f24, #111);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; font-weight: 800; color: var(--muted); text-align: center; padding: 20px;
+    word-break: break-all;
+  }
+  .card-info { padding: 14px; }
+  .card-title { font-size: 15px; font-weight: 700; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; }
+  .card-meta { font-size: 12px; color: var(--muted); text-align: center; }
+
+  /* 全屏播放器 */
+  .player-modal {
+    position: fixed; inset: 0; z-index: 1000; background: rgba(0, 0, 0, 0.95);
+    backdrop-filter: blur(15px); display: none; flex-direction: column; opacity: 0; transition: opacity 0.3s;
+  }
+  .player-modal.active { display: flex; opacity: 1; }
+  .pm-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 40px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+  .pm-title { font-size: 20px; font-weight: 700; }
+  .pm-close { background: rgba(255,255,255,0.1); border: none; color: #fff; width: 40px; height: 40px; border-radius: 50%; font-size: 20px; cursor: pointer; transition: .2s; }
+  .pm-close:hover { background: var(--accent); transform: rotate(90deg); }
+  .pm-body { display: flex; flex: 1; overflow: hidden; }
+  .pm-video-area { flex: 1; display: flex; flex-direction: column; background: #000; }
+  .pm-screen { width: 100%; flex: 1; position: relative; }
+  video { width: 100%; height: 100%; display: block; object-fit: contain; }
+  .pm-episodes { width: 340px; background: #111; border-left: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; }
+  .pm-ep-head { padding: 20px; font-size: 16px; font-weight: 700; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .pm-ep-list { flex: 1; overflow-y: auto; padding: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .ep-btn { background: rgba(255,255,255,0.05); border: 1px solid transparent; color: #ccc; padding: 12px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: .2s; text-align: center; }
+  .ep-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+  .ep-btn.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  /* 弹窗通用 */
+  .modal-overlay { position: fixed; inset: 0; z-index: 2000; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center; padding: 20px; }
+  .modal-overlay.active { display: flex; }
+  .modal-box {
+    background: #121216; border: 1px solid var(--border); width: 100%; max-width: 420px;
+    border-radius: 20px; padding: 30px; animation: scaleUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+  @keyframes scaleUp { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .modal-box h3 { font-size: 22px; margin-bottom: 8px; text-align: center; }
+  .modal-box .sub { font-size: 13px; color: var(--muted); text-align: center; margin-bottom: 24px; }
+  .form-group { margin-bottom: 16px; }
+  .form-group label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+  .form-group input, .form-group textarea {
+    width: 100%; padding: 12px 16px; background: #0a0a0c; border: 1px solid var(--border);
+    border-radius: 10px; color: #fff; font-size: 14px; outline: none; transition: .2s;
+  }
+  .form-group input:focus, .form-group textarea:focus { border-color: var(--accent); }
+  .form-group textarea { resize: vertical; min-height: 80px; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 24px; }
+  .modal-actions button { flex: 1; height: 42px; border-radius: 10px; font-size: 13px; font-weight: 700; cursor: pointer; transition: .2s; border: none; }
+  .btn-cancel { background: transparent; border: 1px solid var(--border) !important; color: var(--text); }
+  .btn-cancel:hover { background: #222; }
+  .btn-submit { background: var(--accent); color: #fff; }
+  .btn-submit:hover { background: var(--accent-hover); }
+
+  @media (max-width: 768px) {
+    .topbar { padding: 0 20px; } .main-content { padding: 0 20px 40px; }
+    .hero { padding: 50px 20px 40px; } .hero h1 { font-size: 28px; }
+    .pm-body { flex-direction: column; } .pm-episodes { width: 100%; height: 250px; border-left: none; border-top: 1px solid rgba(255,255,255,0.1); }
+  }
 </style>
 </head>
 <body>
 
-<div class="app">
-  <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
-  <aside class="sidebar" id="sidebar">
-    <div class="brand">
-      <div class="brand-icon">🎵</div>
-      <div class="brand-name">牦牛<span>音乐</span></div>
-    </div>
-    <div class="brand-slogan">想听就有 · 下载 App</div>
-    <div class="nav-section">
-      <div class="nav-label">浏览</div>
-      <button class="nav-item active" data-nav="home" onclick="nav('home')"><span class="icon">🏠</span><span>首页</span></button>
-      <button class="nav-item" data-nav="all" onclick="nav('all')"><span class="icon">🎵</span><span>全部歌曲</span></button>
-      <button class="nav-item" data-nav="artists" onclick="nav('artists')"><span class="icon">🎤</span><span>歌手</span></button>
-      <button class="nav-item" data-nav="albums" onclick="nav('albums')"><span class="icon">💿</span><span>专辑</span></button>
-    </div>
-    <div class="nav-section" style="margin-top:auto;">
-      <div class="nav-label">获取 App</div>
-      <button class="nav-item" onclick="downloadApp()"><span class="icon">📲</span><span>下载 App</span></button>
-    </div>
-  </aside>
+<header class="topbar">
+  <div class="brand">牦牛<span>影视</span></div>
+  <div class="top-actions">
+    <button class="btn-outline" id="openSubmitBtn">✉️ 用户投稿</button>
+  </div>
+</header>
 
-  <main class="main">
-    <div class="topbar">
-      <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
-      <div class="page-title" id="pageTitle">首页</div>
-      <div class="search-box" id="searchBox">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-        <input type="text" id="searchInput" placeholder="搜索歌曲、歌手、专辑...">
-      </div>
-      <button class="btn btn-primary btn-sm" onclick="downloadApp()" style="flex-shrink:0;">📲 下载 App</button>
+<section class="hero" id="heroSection">
+  <h1>探索无限<em>精彩</em></h1>
+  <p>发现你喜爱的影视剧集，极速播放，尽享视听盛宴</p>
+  <div class="big-search">
+    <span class="ico">🔍</span>
+    <input id="searchInput" type="text" placeholder="搜索剧名..." autocomplete="off">
+  </div>
+</section>
+
+<main class="main-content">
+  <div class="section-title" id="listTitle">最近更新</div>
+  <div class="grid" id="gridArea">
+    <div style="grid-column:1/-1; text-align:center; padding:60px; color:var(--muted)">正在加载精彩内容...</div>
+  </div>
+</main>
+
+<!-- 全屏播放器 -->
+<div class="player-modal" id="playerModal">
+  <div class="pm-header">
+    <div class="pm-title" id="pmTitle">正在播放</div>
+    <button class="pm-close" id="pmCloseBtn">✕</button>
+  </div>
+  <div class="pm-body">
+    <div class="pm-video-area">
+      <div class="pm-screen"><video id="video" controls playsinline></video></div>
     </div>
-    <div class="content" id="content"></div>
-  </main>
+    <div class="pm-episodes">
+      <div class="pm-ep-head">选集播放</div>
+      <div class="pm-ep-list" id="pmEpList"></div>
+    </div>
+  </div>
 </div>
 
-<script src="config.js"></script>
+<!-- 用户投稿弹窗 -->
+<div class="modal-overlay" id="submitModal">
+  <div class="modal-box">
+    <h3>✨ 投稿影视</h3>
+    <p class="sub">独乐乐不如众乐乐！有想看但本站没有的剧？告诉我们，我们尽力去搞！</p>
+    
+    <div class="form-group">
+      <label>剧名（必填）</label>
+      <input id="subTitle" type="text" placeholder="如：三体 / 权力的游戏">
+    </div>
+    <div class="form-group">
+      <label>备注（选填）</label>
+      <textarea id="subNote" placeholder="如：求高清版 / 某个m3u8链接..."></textarea>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" id="closeSubmitBtn">取消</button>
+      <button class="btn-submit" id="submitBtn">提交投稿</button>
+    </div>
+  </div>
+</div>
+
+<!-- 底部版权与声明 -->
+<footer style="text-align:center; padding:40px 20px; color:var(--muted); font-size:12px; border-top:1px solid var(--border); line-height:1.8;">
+  <div style="margin-bottom:12px; max-width:600px; margin-inline:auto; color:#888;">
+    ⚠️ 免责声明：此网站可能含第三方广告，广告收入均为影视方所有，本网站不涉及任何盈利！
+  </div>
+  <div>灿然科技 ©2026 版权所有</div>
+  <div>牦牛工作室</div>
+</footer>
+
 <script>
-// 牦牛音乐 · 预览版（只能看，不能听）
-const state={allSongs:[],allArtists:[],allAlbums:[],songArtists:[],viewSongs:[],view:'home',searchKeyword:'',currentArtist:null,currentAlbum:null};
-const content=document.getElementById('content'),pageTitle=document.getElementById('pageTitle'),searchInput=document.getElementById('searchInput'),searchBox=document.getElementById('searchBox');
-function esc(t){const d=document.createElement('div');d.textContent=t==null?'':t;return d.innerHTML}
-function escAttr(t){return String(t==null?'':t).replace(/\\/g,'\\\\').replace(/'/g,"\\'")}
-function initial(n){return n?n.trim().charAt(0).toUpperCase():'?'}
+  const SUPABASE_URL = 'https://ymcoydzvtxtxaijtbuuy.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_5aF8sRl4HyXNCh5zZnmVgA_SLiuPUBB';
+  const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// ---------- 下载/预览引导 ----------
-function showModal(title,html){
-  const old=document.getElementById('modalOverlay');if(old)old.remove();
-  const o=document.createElement('div');o.id='modalOverlay';
-  o.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.8);backdrop-filter:blur(10px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
-  o.innerHTML=`<div style="background:linear-gradient(135deg,#1a1a24,#17171c);border:1px solid rgba(139,92,246,.4);border-radius:20px;padding:32px 28px;max-width:400px;width:100%;text-align:center;box-shadow:0 24px 60px rgba(139,92,246,.4);animation:pop .4s cubic-bezier(.34,1.56,.64,1);">
-    <div style="font-size:56px;margin-bottom:16px;">📲</div>
-    <h3 style="font-size:20px;margin-bottom:12px;color:#a78bfa;">${title}</h3>
-    <p style="color:#8e8e93;font-size:14px;line-height:1.7;margin-bottom:24px;">${html}</p>
-    <button class="btn btn-primary" style="width:100%;padding:12px;" onclick="document.getElementById('modalOverlay').remove()">我知道了</button>
-  </div>`;
-  document.body.appendChild(o);
-  if(!document.getElementById('popAnim')){const s=document.createElement('style');s.id='popAnim';s.textContent='@keyframes pop{from{opacity:0;transform:scale(.8)}to{opacity:1;transform:scale(1)}}';document.head.appendChild(s)}
-}
-function downloadApp(){
-  const ua=navigator.userAgent,isAndroid=/Android|Adr/i.test(ua),isiOS=/iPhone|iPad|iPod/i.test(ua),isWX=/micromessenger/i.test(ua);
-  if(isWX){showModal('请在浏览器中打开','微信内置浏览器无法下载安装包<br>请点击右上角 <b style="color:#fff;">···</b> 选择 <b style="color:#fff;">「在浏览器中打开」</b>');return}
-  if(isAndroid){const a=document.createElement('a');a.href='download/yak-music.apk';a.download='yak-music.apk';document.body.appendChild(a);a.click();document.body.removeChild(a)}
-  else if(isiOS){showModal('iOS 版即将上线','牦牛音乐 iOS 版正在开发中<br>敬请期待 🎵')}
-  else{showModal('请在手机上打开','用手机浏览器访问此页面<br>点击「下载 App」安装牦牛音乐')}
-}
-function previewOnly(){showModal('下载 App 才能听歌','网页版仅提供曲库预览<br>完整播放功能请下载牦牛音乐 App 🎵')}
+  const hero = document.getElementById('heroSection');
+  const searchInput = document.getElementById('searchInput');
+  const gridArea = document.getElementById('gridArea');
+  const listTitle = document.getElementById('listTitle');
+  const playerModal = document.getElementById('playerModal');
+  const pmCloseBtn = document.getElementById('pmCloseBtn');
+  const pmTitle = document.getElementById('pmTitle');
+  const pmEpList = document.getElementById('pmEpList');
+  const videoEl = document.getElementById('video');
+  
+  const submitModal = document.getElementById('submitModal');
+  const openSubmitBtn = document.getElementById('openSubmitBtn');
+  const closeSubmitBtn = document.getElementById('closeSubmitBtn');
+  const submitBtn = document.getElementById('submitBtn');
 
-// ---------- 导航 ----------
-function nav(v){
-  state.view=v;state.searchKeyword='';searchInput.value='';
-  document.querySelectorAll('.nav-item[data-nav]').forEach(el=>el.classList.toggle('active',el.dataset.nav===v));
-  searchBox.style.display=['home','all','artists','albums'].includes(v)?'flex':'none';
-  if(v==='home')renderHome();else if(v==='all')renderAllSongs();else if(v==='artists')renderArtists();else if(v==='albums')renderAlbums();else if(v==='artist')renderArtistDetail();else if(v==='album')renderAlbumDetail();
-  closeSidebar();
-}
+  let dramas = [], keyword = '', hls = null;
 
-// ---------- 首页 ----------
-function renderHome(){
-  pageTitle.textContent='首页';
-  if(!state.allSongs.length){content.innerHTML='<div class="empty"><div class="empty-icon">🎵</div><div class="empty-text">还没有歌曲</div></div>';return}
-  const am={};state.songArtists.forEach(r=>am[r.artist_id]=(am[r.artist_id]||0)+1);
-  const topA=state.allArtists.map(a=>({...a,_c:am[a.id]||0})).filter(a=>a._c>0).sort((a,b)=>b._c-a._c).slice(0,12);
-  const al={};state.allSongs.forEach(s=>{if(s.album_id)al[s.album_id]=(al[s.album_id]||0)+1});
-  const topAl=state.allAlbums.map(a=>({...a,_c:al[a.id]||0})).filter(a=>a._c>0).slice(0,8);
-  const recent=state.allSongs.slice(-8).reverse();
-  let html=`<div class="download-banner"><div style="font-size:40px;">📲</div><div style="flex:1;min-width:200px;"><div style="font-size:16px;font-weight:700;margin-bottom:4px;">下载牦牛音乐 App</div><div style="font-size:13px;color:var(--text-dim);">网页版仅预览，完整播放请下载 App</div></div><button class="btn btn-primary" onclick="downloadApp()" style="flex-shrink:0;">立即下载</button></div>`;
-  if(topA.length)html+=`<div class="section-header"><div class="section-title">热门歌手</div><button class="section-more" onclick="nav('artists')">查看全部 →</button></div><div class="artist-row">${topA.map(a=>`<div class="artist-card" onclick="openArtist('${escAttr(a.name)}')"><div class="artist-card-avatar">${a.avatar_url?'<img src="'+a.avatar_url+'">':initial(a.name)}</div><div class="artist-card-name">${esc(a.name)}</div><div class="artist-card-count">${a._c} 首</div></div>`).join('')}</div>`;
-  if(topAl.length)html+=`<div class="section-header"><div class="section-title">最新专辑</div><button class="section-more" onclick="nav('albums')">查看全部 →</button></div><div class="artist-row">${topAl.map(a=>{const an=a.artist_id?(state.allArtists.find(x=>x.id===a.artist_id)||{}).name||'未知歌手':'未知歌手';return `<div class="album-card" onclick="openAlbum(${a.id})"><div class="album-card-cover">${a.cover_url?'<img src="'+a.cover_url+'">':'💿'}</div><div class="album-card-name">${esc(a.name)}</div><div class="album-card-artist">${esc(an)}</div></div>`}).join('')}</div>`;
-  if(recent.length)html+=`<div class="section-header"><div class="section-title">最新添加</div><button class="section-more" onclick="nav('all')">查看全部 →</button></div><div class="song-grid">${recent.map(renderSongCard).join('')}</div>`;
-  content.innerHTML=html;
-}
+  // 排序
+  function chineseToNumber(str) {
+    const map = { '零':0, '一':1, '二':2, '三':3, '四':4, '五':5, '六':6, '七':7, '八':8, '九':9, '十':10 };
+    if (str.includes('十')) { const p = str.split('十'); return (p[0]?map[p[0]]:1)*10 + (p[1]?map[p[1]]:0); }
+    return map[str] || 0;
+  }
+  function getEpNumber(name) {
+    if (!name) return Infinity;
+    const str = String(name);
+    let m = str.match(/\d+/); if (m) return parseInt(m[0], 10);
+    m = str.match(/[一二三四五六七八九十]+/); if (m) return chineseToNumber(m[0]);
+    return Infinity;
+  }
+  function naturalCompare(a, b) {
+    const na = getEpNumber(a), nb = getEpNumber(b);
+    return na !== nb ? na - nb : String(a).localeCompare(String(b), 'zh-CN');
+  }
 
-function renderSongCard(s){
-  const cover=s._cover;
-  const ah=(s._artists||[]).map((a,i)=>(i>0?' / ':'')+`<span onclick="event.stopPropagation(); openArtist('${escAttr(a.name)}')">${esc(a.name)}</span>`).join('')||'未知歌手';
-  return `<div class="song-card"><div class="card-cover-wrap" onclick="previewOnly()">${cover?'<img src="'+cover+'">':'<div class="card-cover-placeholder">🎵</div>'}<button class="card-play" onclick="event.stopPropagation(); previewOnly()">▶</button></div><div class="card-title" onclick="previewOnly()">${esc(s.title)}</div><div class="card-artist">${ah}</div></div>`;
-}
+  // 播放
+  function playM3U8(url) {
+    if (!url) return;
+    if (hls) { hls.destroy(); hls = null; }
+    if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
+      videoEl.src = url; videoEl.play().catch(() => {});
+    } else if (Hls.isSupported()) {
+      hls = new Hls({ enableWorker: true, capLevelToPlayerSize: true });
+      hls.loadSource(url); hls.attachMedia(videoEl);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => videoEl.play().catch(() => {}));
+    } else { videoEl.src = url; videoEl.play().catch(() => {}); }
+  }
 
-function renderAllSongs(){
-  pageTitle.textContent='全部歌曲';
-  state.viewSongs=filterBySearch(state.allSongs);
-  if(!state.viewSongs.length){content.innerHTML='<div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">没有找到歌曲</div></div>';return}
-  content.innerHTML='<div class="song-grid">'+state.viewSongs.map(renderSongCard).join('')+'</div>';
-}
+  // 加载数据
+  async function loadData() {
+    const { data, error } = await db.from('dramas').select('id,title,created_at,episodes(id,name,url)').order('created_at', { ascending: false });
+    if (error) { gridArea.innerHTML = '<div class="empty">加载失败</div>'; return; }
+    dramas = data || [];
+    dramas.forEach(d => { if (d.episodes) d.episodes.sort((a, b) => naturalCompare(a.name, b.name)); });
+    renderGrid();
+  }
 
-function filterBySearch(songs){
-  if(!state.searchKeyword)return songs.slice();
-  const kw=state.searchKeyword.toLowerCase();
-  return songs.filter(s=>{
-    const a=(s._artists||[]).map(x=>x.name).join(' ');
-    return (s.title||'').toLowerCase().includes(kw)||a.toLowerCase().includes(kw)||(s._album?s._album.name:'').toLowerCase().includes(kw);
-  });
-}
-
-// ---------- 歌手 ----------
-function renderArtists(){
-  pageTitle.textContent='歌手';
-  const m={};state.songArtists.forEach(r=>m[r.artist_id]=(m[r.artist_id]||0)+1);
-  const arts=state.allArtists.map(a=>({...a,_c:m[a.id]||0})).filter(a=>a._c>0).sort((a,b)=>a.name.localeCompare(b.name,'zh'));
-  if(!arts.length){content.innerHTML='<div class="empty"><div class="empty-icon">🎤</div><div class="empty-text">暂无歌手</div></div>';return}
-  content.innerHTML='<div class="song-grid" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr));">'+arts.map(a=>`<div class="artist-card" style="width:100%;" onclick="openArtist('${escAttr(a.name)}')"><div class="artist-card-avatar" style="width:100%;height:auto;aspect-ratio:1;">${a.avatar_url?'<img src="'+a.avatar_url+'">':initial(a.name)}</div><div class="artist-card-name">${esc(a.name)}</div><div class="artist-card-count">${a._c} 首</div></div>`).join('')+'</div>';
-}
-
-function openArtist(name){state.currentArtist=name;nav('artist')}
-
-function renderArtistDetail(){
-  const name=state.currentArtist;if(!name){nav('home');return}
-  pageTitle.textContent='歌手详情';searchBox.style.display='none';
-  const artist=state.allArtists.find(a=>a.name===name);
-  let songs=[];
-  if(artist){const ids=state.songArtists.filter(r=>r.artist_id===artist.id).map(r=>r.song_id);songs=state.allSongs.filter(s=>ids.includes(s.id))}
-  const cover=artist&&artist.avatar_url?artist.avatar_url:null;
-  const bio=artist&&artist.bio?artist.bio:'';
-  content.innerHTML=`<div class="artist-hero"><div class="artist-hero-avatar">${cover?'<img src="'+cover+'">':initial(name)}</div><div><div class="artist-hero-label">歌手</div><div class="artist-hero-name">${esc(name)}</div><div class="artist-hero-meta">共 <b style="color:var(--text)">${songs.length}</b> 首歌曲${bio?' · '+esc(bio):''}</div></div></div><div id="artistSongs"></div>`;
-  state.viewSongs=songs;renderUserSongList();
-}
-
-// ---------- 专辑 ----------
-function renderAlbums(){
-  pageTitle.textContent='专辑';
-  const m={};state.allSongs.forEach(s=>{if(s.album_id)m[s.album_id]=(m[s.album_id]||0)+1});
-  const als=state.allAlbums.map(a=>({...a,_c:m[a.id]||0})).filter(a=>a._c>0).sort((a,b)=>a.name.localeCompare(b.name,'zh'));
-  if(!als.length){content.innerHTML='<div class="empty"><div class="empty-icon">💿</div><div class="empty-text">暂无专辑</div></div>';return}
-  content.innerHTML='<div class="artist-row" style="flex-wrap:wrap;">'+als.map(a=>{const an=a.artist_id?(state.allArtists.find(x=>x.id===a.artist_id)||{}).name||'':'未知歌手';return `<div class="album-card" onclick="openAlbum(${a.id})"><div class="album-card-cover">${a.cover_url?'<img src="'+a.cover_url+'">':'💿'}</div><div class="album-card-name">${esc(a.name)}</div><div class="album-card-artist">${esc(an||'未知歌手')} · ${a._c} 首</div></div>`}).join('')+'</div>';
-}
-
-function openAlbum(id){state.currentAlbum=id;nav('album')}
-
-function renderAlbumDetail(){
-  const id=state.currentAlbum;if(!id){nav('home');return}
-  const album=state.allAlbums.find(a=>a.id===id);if(!album){nav('albums');return}
-  pageTitle.textContent='专辑详情';searchBox.style.display='none';
-  const songs=state.allSongs.filter(s=>s.album_id===id);
-  const an=album.artist_id?(state.allArtists.find(x=>x.id===album.artist_id)||{}).name||'未知歌手':'未知歌手';
-  content.innerHTML=`<div class="artist-hero"><div class="artist-hero-avatar album">${album.cover_url?'<img src="'+album.cover_url+'">':'💿'}</div><div><div class="artist-hero-label">专辑</div><div class="artist-hero-name">${esc(album.name)}</div><div class="artist-hero-meta"><span style="cursor:pointer;color:var(--accent);" onclick="openArtist('${escAttr(an)}')">${esc(an)}</span> · 共 <b style="color:var(--text)">${songs.length}</b> 首</div></div></div><div id="artistSongs"></div>`;
-  state.viewSongs=songs;renderUserSongList();
-}
-
-function renderUserSongList(){
-  const el=document.getElementById('artistSongs');if(!el)return;
-  if(!state.viewSongs.length){el.innerHTML='<div class="empty"><div class="empty-text">暂无歌曲</div></div>';return}
-  el.innerHTML=state.viewSongs.map(s=>{
-    const cover=s._cover;
-    const a=(s._artists||[]).map(x=>x.name).join(' / ')||'未知歌手';
-    return `<div class="user-row" onclick="previewOnly()"><div class="row-cover">${cover?'<img src="'+cover+'">':'🎵'}</div><div class="row-info"><div class="row-title">${esc(s.title)}</div><div class="row-meta">${esc(a)} · ${esc(s._album?s._album.name:'无专辑')}</div></div></div>`;
-  }).join('');
-}
-
-// ---------- 搜索 ----------
-let searchTimer=null;
-searchInput.addEventListener('input',function(){
-  clearTimeout(searchTimer);
-  searchTimer=setTimeout(()=>{
-    state.searchKeyword=searchInput.value.trim();
-    if(state.view==='home'||state.view==='all'){renderAllSongs();pageTitle.textContent=state.searchKeyword?'搜索：'+state.searchKeyword:'全部歌曲'}
-  },200);
-});
-
-// ---------- 侧边栏 ----------
-function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('sidebarOverlay').classList.toggle('show')}
-function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.getElementById('sidebarOverlay').classList.remove('show')}
-
-// ---------- 启动 ----------
-(async function(){
-  try{
-    const [artsRes,albsRes,songsRes,relsRes]=await Promise.all([
-      supabaseClient.from('artists').select('*'),
-      supabaseClient.from('albums').select('*'),
-      supabaseClient.from('songs').select('*').order('created_at',{ascending:true}),
-      supabaseClient.from('song_artists').select('*')
-    ]);
-    state.allArtists=artsRes.data||[];
-    state.allAlbums=albsRes.data||[];
-    state.allSongs=songsRes.data||[];
-    state.songArtists=relsRes.data||[];
-    state.allSongs.forEach(s=>{
-      const rel=state.songArtists.filter(r=>r.song_id===s.id).sort((a,b)=>(a.position||0)-(b.position||0));
-      s._artists=rel.map(r=>{const a=state.allArtists.find(x=>x.id===r.artist_id);return a?{id:a.id,name:a.name,avatar_url:a.avatar_url}:null}).filter(Boolean);
-      if(!s._artists.length&&s.artist)s._artists=s.artist.split(/[,、/&]/).map(n=>({id:null,name:n.trim(),avatar_url:null})).filter(a=>a.name);
-      const alb=s.album_id?state.allAlbums.find(a=>a.id===s.album_id):null;
-      s._album=alb||null;
-      s._cover=s.cover_url||(alb?alb.cover_url:null);
+  function renderGrid() {
+    const kw = keyword.trim().toLowerCase();
+    const list = dramas.filter(d => !kw || d.title.toLowerCase().includes(kw));
+    if (list.length === 0) {
+      gridArea.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--muted)">没有找到相关影视</div>`;
+      return;
+    }
+    gridArea.innerHTML = '';
+    list.forEach(d => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `
+        <div class="card-cover">${d.title}</div>
+        <div class="card-info">
+          <div class="card-title">${d.title}</div>
+          <div class="card-meta">${d.episodes?.length || 0} 集全</div>
+        </div>
+      `;
+      card.addEventListener('click', () => openPlayer(d));
+      gridArea.appendChild(card);
     });
-  }catch(e){console.error(e)}
-  renderHome();
-})();
+  }
+
+  function openPlayer(drama) {
+    pmTitle.textContent = drama.title;
+    pmEpList.innerHTML = '';
+    if (drama.episodes && drama.episodes.length > 0) {
+      drama.episodes.forEach((ep, idx) => {
+        const btn = document.createElement('div');
+        btn.className = 'ep-btn';
+        btn.textContent = ep.name;
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.ep-btn').forEach(b => b.classList.remove('on'));
+          btn.classList.add('on');
+          playM3U8(ep.url);
+        });
+        pmEpList.appendChild(btn);
+        if (idx === 0) btn.click();
+      });
+    } else {
+      pmEpList.innerHTML = '<div style="grid-column:1/-1;color:#666;text-align:center;padding:20px;">暂无剧集</div>';
+      if (hls) { hls.destroy(); hls = null; }
+      videoEl.removeAttribute('src'); videoEl.load();
+    }
+    playerModal.classList.add('active');
+  }
+
+  pmCloseBtn.addEventListener('click', () => {
+    playerModal.classList.remove('active');
+    if (hls) { hls.destroy(); hls = null; }
+    videoEl.pause();
+  });
+
+  searchInput.addEventListener('input', (e) => {
+    keyword = e.target.value;
+    hero.classList.toggle('hide', !!keyword.trim());
+    listTitle.textContent = keyword.trim() ? '搜索结果' : '最近更新';
+    renderGrid();
+  });
+
+  // 投稿
+  openSubmitBtn.addEventListener('click', () => submitModal.classList.add('active'));
+  closeSubmitBtn.addEventListener('click', () => submitModal.classList.remove('active'));
+
+  submitBtn.addEventListener('click', async () => {
+    const title = document.getElementById('subTitle').value.trim();
+    const note = document.getElementById('subNote').value.trim();
+    if (!title) { alert('请填写剧名'); return; }
+
+    submitBtn.textContent = '提交中...'; submitBtn.disabled = true;
+    const { error } = await db.from('submissions').insert({ title, note });
+    submitBtn.textContent = '提交投稿'; submitBtn.disabled = false;
+
+    if (error) { alert('投稿失败：' + error.message); }
+    else {
+      alert('🎉 投稿成功！感谢你的分享，我们会尽快安排上架。');
+      submitModal.classList.remove('active');
+      document.getElementById('subTitle').value = '';
+      document.getElementById('subNote').value = '';
+    }
+  });
+
+  loadData();
 </script>
 </body>
 </html>
